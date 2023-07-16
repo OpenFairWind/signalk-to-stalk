@@ -11,13 +11,14 @@ module.exports = function (app) {
     datagram: '0x54',
     title: '0x54 - GMT-time',
     keys: ['navigation.datetime'],
+    throttle: 1000,
     f: function g0x54 (datetime8601) {
-      var datetime = new Date(datetime8601)
-      var HH = datetime.getUTCHours()
-      
-      var RS = ((datetime.getUTCMinutes() * 4) & 0xfc) + ((datetime.getUTCSeconds() >> 4) & 0x03)
+      let datetime = new Date(datetime8601)
+      let HH = datetime.getUTCHours()
 
-      var T = datetime.getUTCSeconds() & 0x0f
+      let RS = ((datetime.getUTCMinutes() * 4) & 0xfc) + ((datetime.getUTCSeconds() >> 4) & 0x03)
+
+      let T = datetime.getUTCSeconds() & 0x0f
       T = (T << 4) | 0x01
 
       return stalk.toDatagram(['54', stalk.toHexString(T), stalk.toHexString(RS),stalk.toHexString(HH)])

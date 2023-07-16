@@ -13,12 +13,13 @@ module.exports = function (app) {
     datagram: '0x51',
     title: '0x51 - LON position',
     keys: ['navigation.position'],
+    throttle: 1013,
     f: function g0x51 (position) {
-      var longitude = Math.abs(position.longitude)
-      var degrees = Math.floor(longitude)
-      var minutes100 = parseInt(Math.round(100*(longitude-degrees)*60))
-      XX = stalk.toHexString(parseInt(degrees))
-      YYYY = minutes100 & 0x7FFF
+      let longitude = Math.abs(position.longitude)
+      let degrees = Math.floor(longitude)
+      let minutes100 = parseInt(Math.round(100*(longitude-degrees)*60))
+      let XX = stalk.toHexString(parseInt(degrees))
+      let YYYY = minutes100 & 0x7FFF
       if (position.longitude>0) YYYY = YYYY | 0x8000
       YYYY = stalk.padd(YYYY.toString(16),4)
       return stalk.toDatagram(['51', 'A2', XX, YYYY.substring(2,4), YYYY.substring(0,2)])

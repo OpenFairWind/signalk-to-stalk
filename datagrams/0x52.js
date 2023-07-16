@@ -9,10 +9,11 @@ module.exports = function (app) {
     datagram: '0x52',
     title: '0x52 - Speed over Ground',
     keys: ['navigation.speedOverGround'],
+    throttle: 1019,
     f: function g0x52 (sog) {
-      var sogKn = sog*1.944
-      var sog10 = parseInt(Math.round(sogKn*10))
-      XXXX = stalk.padd(sog10.toString(16),4)
+      let sogKn = sog*1.944
+      let sog10 = parseInt(Math.round(sogKn*10))
+      let XXXX = stalk.padd(sog10.toString(16),4)
       return stalk.toDatagram(['52', '01', XXXX.substring(2,4), XXXX.substring(0,2)])
     }
   }

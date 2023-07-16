@@ -14,14 +14,15 @@ module.exports = function (app) {
     datagram: '0x53',
     title: '0x53 - Magnetic Couse in degrees',
     keys: ['navigation.courseOverGroundTrue','navigation.magneticVariation'],
+    throttle: 1021,
     f: function g0x53 (cog,magneticVariation) {
-      var mcd = parseInt(Math.round((cog-magneticVariation)*57.296))
+      let mcd = parseInt(Math.round((cog-magneticVariation)*57.296))
       if (mcd>=360) mcd=mcd-360
       if (mcd<0) mcd=ncd+360
-      var u1 = (mcd / 90.0) & 0x03
-      var u2 = (stalk.fmod(mcd,2.0)*8.0) & 0x0c
-      var vw = (stalk.fmod(mcd,90.0)/2.0) & 0x3f
-      var u = ((u1+u2) << 4) & 0xf0
+      let u1 = (mcd / 90.0) & 0x03
+      let u2 = (stalk.fmod(mcd,2.0)*8.0) & 0x0c
+      let vw = (stalk.fmod(mcd,90.0)/2.0) & 0x3f
+      let u = ((u1+u2) << 4) & 0xf0
       return stalk.toDatagram(['53', stalk.toHexString(u), stalk.toHexString(vw)])
     }
   }
