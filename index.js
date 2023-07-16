@@ -9,13 +9,13 @@ const path = require('path')
 const fs = require('fs')
 
 module.exports = function (app) {
-  var plugin = {
+  let plugin = {
     unsubscribes: []
   }
 
   plugin.id = 'sk-to-stalk'
   plugin.name = 'Convert Signal K to STALK'
-  plugin.description = 'Plugin to convert Signal K to STALK (SeaTalk over NMEA0183)'
+  plugin.description = 'Plugin to convert Signal K data to STALK (SeaTalk over NMEA0183)'
 
   plugin.schema = {
     type: 'object',
@@ -85,7 +85,7 @@ module.exports = function (app) {
 
 function buildSchemaFromDatagrams (plugin) {
   Object.keys(plugin.datagrams).forEach(key => {
-    var datagram = plugin.datagrams[key]
+    let datagram = plugin.datagrams[key]
     const throttlePropname = getThrottlePropname(key)
     plugin.schema.properties[key] = {
       title: datagram['title'],
@@ -95,7 +95,7 @@ function buildSchemaFromDatagrams (plugin) {
     plugin.schema.properties[throttlePropname] = {
       title: `${key} throttle ms`,
       type: 'number',
-      default: 0
+      default: datagram['throttle']
     }
   })
 }
