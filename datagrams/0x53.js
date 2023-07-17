@@ -18,7 +18,7 @@ module.exports = function (app) {
     f: function g0x53 (cog) {
       let mcd = parseInt(Math.round(cog*57.296))
       if (mcd>=360) mcd=mcd-360
-      if (mcd<0) mcd=ncd+360
+      if (mcd<0) mcd=mcd+360
       let u1 = (mcd / 90.0) & 0x03
       let u2 = (stalk.fmod(mcd,2.0)*8.0) & 0x0c
       let vw = (stalk.fmod(mcd,90.0)/2.0) & 0x3f
