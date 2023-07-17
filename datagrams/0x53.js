@@ -16,7 +16,7 @@ module.exports = function (app) {
     keys: ['navigation.courseOverGroundMagnetic'],
     throttle: 1021,
     f: function g0x53 (cog) {
-      let mcd = parseInt(Math.round(cog*57.296))
+      let mcd = Math.round(cog*57.296)
       if (mcd>=360) mcd=mcd-360
       if (mcd<0) mcd=mcd+360
       let u1 = (mcd / 90.0) & 0x03
