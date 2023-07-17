@@ -12,11 +12,11 @@ const stalk = require('../stalk.js')
 module.exports = function (app) {
   return {
     datagram: '0x53',
-    title: '0x53 - Magnetic Couse in degrees',
-    keys: ['navigation.courseOverGroundTrue','navigation.magneticVariation'],
+    title: '0x53 - Magnetic Course in degrees',
+    keys: ['navigation.courseOverGroundMagnetic'],
     throttle: 1021,
-    f: function g0x53 (cog,magneticVariation) {
-      let mcd = parseInt(Math.round((cog-magneticVariation)*57.296))
+    f: function g0x53 (cog) {
+      let mcd = parseInt(Math.round(cog*57.296))
       if (mcd>=360) mcd=mcd-360
       if (mcd<0) mcd=ncd+360
       let u1 = (mcd / 90.0) & 0x03
