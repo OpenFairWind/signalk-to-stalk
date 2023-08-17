@@ -57,7 +57,7 @@ module.exports = function (app) {
 		schema: {
 			type: 'object',
     			title: 'Conversions to STALK',
-    			description: 'If there is SK data for the conversion generate the following SeaTalk datagrams',
+    			description: 'Convert the following data to STALK',
     			properties: {
       				"event_identifier": {
         				type: 'string',
