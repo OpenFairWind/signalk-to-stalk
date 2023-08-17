@@ -10,5 +10,13 @@
     "signalk-node-server-plugin"
   ],
   "author": "Raffaele Montella",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OpenFairWind/signalk-to-stalk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OpenFairWind/signalk-to-stalk/issues"
+  },
+  "homepage": "https://github.com/OpenFairWind/signalk-to-stalk#readme"
 }
