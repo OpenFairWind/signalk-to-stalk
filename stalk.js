@@ -15,7 +15,7 @@ function toDatagram (parts) {
   let base = "$STALK,"+parts.join(',')
 
   // Return the base and the NMEA0183 checksum
-  return base + computeChecksum(base)
+  return (base + computeChecksum(base)).toUpperCase()
 }
 
 // Compute the NMEA0183 checksum
