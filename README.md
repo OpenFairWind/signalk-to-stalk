@@ -1,7 +1,7 @@
 # signalk-to-stalk
 Signal K Node server plugin to convert Signal K to STALK (Seatalk over NMEA 0183). See the code for a list of supported datagrams.
 
-It is needed to activate the plugin and the relevant datagrams in the server's Admin interface to use the plugin. The conversion results (STALK) will be available on Signalk's built-in TCP NMEA 0183 server (Port 10110).
+It is needed to activate the plugin and the relevant data handlers in the server's Admin interface to use the plugin. The conversion results (STALK) will be available on Signalk's built-in TCP NMEA 0183 server (Port 10110).
 
 As the plugin automatically sends STALK data to Signalk's built-in TCP NMEA 0183 server, it is possible to have access to the NMEA 0183 strings without configuring anything (Aka a serial output device) by connecting to port 10110 with a TCP client.
 
@@ -41,4 +41,4 @@ Suppose to output the conversion result into a serial connection (i.e., Digital 
 
 Note: Internally the plugin emits the converted NMEA 0183 messages as `Events` under the event identifier `stalkout`. The above configuration sends the converted data (SeaTalk over NMEA 0183) under the `stalkout` events identifier to the serialport's output.
 
-This Signal K server plugin has been developed from https://github.com/SignalK/signalk-to-nmea0183 and https://github.com/SignalK/signalk-autopilot excellent software components.
+Note: If you are using the Digital Yacht's SeaTalk1 to NMEA0183 or SeaTalk to USB interfaces, you must setup the STALK mode and 38400 baud connection speed.
