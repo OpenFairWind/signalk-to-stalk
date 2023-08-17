@@ -51,7 +51,7 @@ function loadHandlers (app, plugin) {
 module.exports = function (app) {
 
 	var plugin = {
-		id: 'signalk-to-stalk-plugin',
+		id: 'signalk-to-stalk',
 		name: 'Convert Signal K to STALK',
 		description: 'Signal K server plugin to convert Signal K to STALK',
 		schema: {
