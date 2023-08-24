@@ -81,10 +81,20 @@ module.exports = function (app) {
 		
 		Object.keys(plugin.handlers).forEach( key => {
 			if (options[key]) {
-				subscribes.push( {
-					path: key,
-					period: plugin.handlers[key].period
-				})
+				app.debug("Added: " + key)
+				subscribe = {
+					path: key
+				}
+				if ("period" in plugin.handlers[key]) {
+					subscribe.period = plugin.handlers[key].period
+				}
+				if ("policy" in plugin.handlers[key]) {
+					subscribe.policy = plugin.handlers[key].policy
+				}
+				if ("minPeriod" in plugin.handlers[key]) {
+					subscribe.minPeriod = plugin.handlers[key].minPeriod
+				}
+				subscribes.push( subscribe )
 			}
 		}) 
 
@@ -102,7 +112,7 @@ module.exports = function (app) {
     			delta => {
       				delta.updates.forEach(u => {
 					u.values.forEach(v => {
-					
+						app.debug("v.path: " + v.path)
 						if (v.path in plugin.handlers) {
 						
 							let datagrams = plugin.handlers[v.path].handler(v.value)
