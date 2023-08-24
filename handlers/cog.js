@@ -5,7 +5,8 @@ const stalk = require('../stalk.js')
 module.exports = function (app) {
 	return {
 		"title": "Course Over Ground (Magnetic)",
-		"period": 1000,
+		"minPeriod": 1000,
+		"policy": "instant",
 		"path": "navigation.courseOverGroundMagnetic",
 		"handler": function (cog) {
 			
