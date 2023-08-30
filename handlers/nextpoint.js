@@ -9,6 +9,8 @@ module.exports = function (app) {
 		"title": "Course Next Point",
 		"minPeriod": 1000,
 		"policy": "instant",
+		//"period": 1000,
+		//"policy": "ideal",
 		"path": "navigation.course.nextPoint",
 		"handler": function (nextPoint) {
 		
