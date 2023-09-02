@@ -12,7 +12,7 @@ module.exports = function (app) {
 			
 			var datagrams = []
 		
-			let degrees, minutes100, XX, YYYY, datagram
+			let degrees, minutes100, KKYY, XX, YY, KK, datagram
 		
 			let latitude = Math.abs(position.latitude)
 			let longitude = Math.abs(position.longitude)
@@ -26,14 +26,24 @@ Corresponding NMEA sentences: RMC, GAA, GLL
 */
 			// SeaTalk1 Encoder 0x50
 
-			degrees = Math.floor(latitude)
-      			minutes100 = parseInt(Math.round(100*(latitude-degrees)*60))
-      			XX = stalk.toHexString(parseInt(degrees))
-      			YYYY = minutes100 & 0x7FFF
-     	 		if (position.latitude<0) YYYY = YYYY | 0x8000
-      			YYYY = stalk.padd(YYYY.toString(16),4)
+			degrees = Math.floor(Math.abs(latitude))
+			minutes100 = Math.round(6000.0 * (latitude-degrees))
+      			KKYY = parseInt(minutes100) & 0x7fff
+     	 		if (position.latitude<0) KKYY = KKYY | 0x8000
+			
+			//app.debug("latitude: " + latitude)
+			//app.debug("degrees: " + degrees + " minutes100: " + minutes100)
+			
+			XX = parseInt(degrees) & 0xff
+      			YY = KKYY & 0xff
+			KK = (KKYY >> 8) & 0xff
       		
-			datagram = stalk.toDatagram(['50', '02', XX, YYYY.substring(2,4), YYYY.substring(0,2)])
+			datagram = stalk.toDatagram([
+				'50', '02', 
+				stalk.toHexString(XX), 
+				stalk.toHexString(YY),
+				stalk.toHexString(KK)
+			])
 
 			datagrams.push(datagram)
 			
@@ -46,15 +56,25 @@ Corresponding NMEA sentences: RMC, GAA, GLL
 */
 			// SeaTalk1 Encoder 0x51
 
+			degrees = Math.abs(Math.floor(longitude))
+			minutes100 = Math.round(6000.0 * (longitude-degrees))
+      			KKYY = parseInt(minutes100) & 0x7fff
+     	 		if (position.longitude>0) KKYY = KKYY | 0x8000
+			
+			//app.debug("longitude: " + longitude)
+			//app.debug("degrees: " + degrees + " minutes100: " + minutes100)
+			
+			XX = parseInt(degrees) & 0xff
+      			YY = KKYY & 0xff
+			KK = (KKYY >> 8) & 0xff
+      		
+			datagram = stalk.toDatagram([
+				'51', '02', 
+				stalk.toHexString(XX), 
+				stalk.toHexString(YY),
+				stalk.toHexString(KK)
+			])
 		
-			degrees = Math.floor(longitude)
-      			minutes100 = parseInt(Math.round(100*(longitude-degrees)*60))
-      			XX = stalk.toHexString(parseInt(degrees))
-      			YYYY = minutes100 & 0x7FFF
-      			if (position.longitude>0) YYYY = YYYY | 0x8000
-      			YYYY = stalk.padd(YYYY.toString(16),4)
-      			datagram = stalk.toDatagram(['51', '02', XX, YYYY.substring(2,4), YYYY.substring(0,2)])
-
 			datagrams.push(datagram)
 			return datagrams
 		}
