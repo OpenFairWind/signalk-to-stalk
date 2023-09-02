@@ -59,11 +59,12 @@ const Course = class {
 				// Get the value
 				xte = xte.value
 			}
-			//this.app.debug("xte: " + xte + " m")
+			
 		}
 	
 		// Check if the valu is not null
 		if (xte != null) {
+			
 			// Content flag: only XTE is present
 			this.F = this.f | 0x01
 			
@@ -75,6 +76,8 @@ const Course = class {
 			// Convert the xte in positive nautical miles
 			let xteNm = Math.abs(xte * 0.000539957)
 			
+			this.app.debug("xteNm: " + xteNm + " Nm")
+			
 			// Check if the XTE is greater or equal than 0.3 Nm
 			if (xteNm >= 0.3) {
 			
@@ -83,7 +86,7 @@ const Course = class {
 			}
 			
 			// Multiply the nautical miles by 100 as an integer
-			let xteNm100 = parseInt(Math.round(xteNm*100))
+			let xteNm100 = parseInt(Math.round(xteNm*100.0))
 			
 			xteNm100 = (xteNm100 | 0xf000) & 0x0fff
 			
@@ -111,7 +114,7 @@ const Course = class {
 				// Get the value
 				btw = btw.value
 			}
-			//this.app.debug("btw: " + btw + " rad")
+			//
 		}
 		
 		// Check if the value is not null
@@ -128,7 +131,7 @@ const Course = class {
       			if (btwN>=360) btwN=btwN-360
       			if (btwN<0) btwN=btwN+360
 			
-			//app.debug("btwN: " + btwN)
+			this.app.debug("btwN: " + btwN + " deg")
 			
 			// Get the number of 90 degrees (0 to 3)
       			this.U = parseInt(Math.floor(btwN / 90.0)) & 0x03
@@ -136,13 +139,9 @@ const Course = class {
 			// Bearing is true
 			this.U = this.U | 0x08
 			
-			//app.debug("U: "+stalk.padd(U.toString(16),2)+ " " +stalk.padd(U.toString(2),8))
-      			
 			// Get the ramains in terms of half degrees
 			let WV = parseInt(Math.round((btwN - (90.0 * this.U))*2.0))
 			
-			//app.debug("WV: "+stalk.padd(WV.toString(16),2)+ " " +stalk.padd(WV.toString(2),8))
-      			
 			// Get the msn
 			this.V = WV & 0x0f
 			
@@ -166,7 +165,7 @@ const Course = class {
 				dtw = dtw.value
 			}
 			
-			//this.app.debug("dtw: " + dtw + " m")
+			//
 		}
 		
 		// Check if the value is not null
@@ -180,6 +179,7 @@ const Course = class {
 			
 			//let dtwNm=51.3
 			
+			this.app.debug("dtwNm: " + dtwNm + " Nm")
 			
 			// Calculate the scaled dtw
 			let dtwNm100or10
@@ -196,8 +196,6 @@ const Course = class {
 			dtwNm100or10 = parseInt(Math.round(dtwNm100or10))
 			
 			dtwNm100or10 = (dtwNm100or10 | 0xf000) & 0x0fff
-			
-			//app.debug("dtwNm100or10: " + dtwNm100or10 + " " + stalk.padd(dtwNm100or10.toString(2), 12))
 			
 			// Most significative byte
 			this.ZZ = (dtwNm100or10 & 0xff0) >> 4
