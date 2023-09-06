@@ -24,6 +24,7 @@ const Course = class {
 
 		this.U = 0
 		this.V = 0
+		this.W = 0
 	}
 
 	getResult() {
@@ -36,7 +37,9 @@ const Course = class {
 			VU: (this.V << 4) | this.U,
 			
 			// Assemble zw
-			ZW: this.Z | (this.W >> 4),
+			ZW: this.Z | this.W,
+			
+			ZZ: this.ZZ,
 			
 			// Assemble steering and flags bytes
 			YF: YF,
@@ -46,6 +49,9 @@ const Course = class {
 	}
 
 	processXTE(xte) {
+	
+		// Testing value
+		//xte = 4833.72
 	
 		// Check if the passed parameter is null
 		if (xte == null) {
@@ -103,6 +109,9 @@ const Course = class {
 			
 	processBTW(btw) {
 	
+		// Testing value
+		//btw = 4.01424183
+	
 		// Check if the passed parameter is null
 		if (btw == null) {
 			// Get BTW from the document
@@ -123,9 +132,6 @@ const Course = class {
 			// Content flags: BTW is present
 			this.F = this.f | 0x02
 			
-			
-			//btw = 4.01424183
-			
 			// Calculate btw in North degrees
 			let btwN = parseInt(Math.round(btw*57.296))
       			if (btwN>=360) btwN=btwN-360
@@ -136,23 +142,31 @@ const Course = class {
 			// Get the number of 90 degrees (0 to 3)
       			this.U = parseInt(Math.floor(btwN / 90.0)) & 0x03
 			
-			// Bearing is true
-			this.U = this.U | 0x08
+			//this.app.debug("U: " + this.U)
 			
 			// Get the ramains in terms of half degrees
-			let WV = parseInt(Math.round((btwN - (90.0 * this.U))*2.0))
+			let WV = parseInt(Math.round((btwN - (90.0 * this.U))*2.0)) & 0xff
+			
+			//this.app.debug("WV: " + WV)
 			
 			// Get the msn
 			this.V = WV & 0x0f
 			
 			// Get the lsn
-			this.W = WV & 0xf0
+			this.W = WV >> 4
+			
+			// Bearing is true
+			this.U = this.U | 0x08
 			
 			
 		}	
 	}	
 
 	processDTW(dtw) {
+	
+		// Testing value
+		//dtw = 95007.6
+		
 		// Check if the passed parameter is null
 		if (dtw == null) {
 			// Get DTW from the document
@@ -176,8 +190,6 @@ const Course = class {
 			
 			// Convert the dtw in nautical miles
 			let dtwNm = dtw * 0.000539957
-			
-			//let dtwNm=51.3
 			
 			this.app.debug("dtwNm: " + dtwNm + " Nm")
 			
