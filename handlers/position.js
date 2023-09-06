@@ -29,6 +29,7 @@ Corresponding NMEA sentences: RMC, GAA, GLL
 			degrees = Math.floor(Math.abs(latitude))
 			minutes100 = Math.round(6000.0 * (latitude-degrees))
       			KKYY = parseInt(minutes100) & 0x7fff
+			
      	 		if (position.latitude<0) KKYY = KKYY | 0x8000
 			
 			//app.debug("latitude: " + latitude)
@@ -59,6 +60,7 @@ Corresponding NMEA sentences: RMC, GAA, GLL
 			degrees = Math.abs(Math.floor(longitude))
 			minutes100 = Math.round(6000.0 * (longitude-degrees))
       			KKYY = parseInt(minutes100) & 0x7fff
+			
      	 		if (position.longitude>0) KKYY = KKYY | 0x8000
 			
 			//app.debug("longitude: " + longitude)
