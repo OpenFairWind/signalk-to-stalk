@@ -3,6 +3,7 @@
 
 const stalk = require('../stalk.js')
 const course = require('../course.js')
+const waypoint = require('../waypoint.js')
 
 module.exports = function (app) {
 	return {
@@ -15,6 +16,33 @@ module.exports = function (app) {
 			// The datagrams
 			var datagrams = []
 
+			// The result
+			let result = null
+
+			// Get the waypoint data
+                        let oWaypoint = new waypoint.Waypoint(app)
+
+                        // Get the next point encoding
+                        result = oWaypoint.getNextPoint(null)
+
+			// Check if the result is valid
+			if (result != null) {
+
+                        	// Create the datagram 0x82 (waypoint name)
+                        	let datagram82 = stalk.toDatagram([
+                                	'82','05',
+                                	stalk.toHexString(result.XX),
+                                	stalk.toHexString(result.xx),
+                                	stalk.toHexString(result.YY),
+                                	stalk.toHexString(result.yy),
+                                	stalk.toHexString(result.ZZ),
+                                	stalk.toHexString(result.zz)
+                        	])
+
+				datagrams.push(datagram82)
+			}
+
+
 			// Get the xte as stalk parts
 			let oCourse = new course.Course(app)
 			oCourse.processXTE(xte)
@@ -23,9 +51,9 @@ module.exports = function (app) {
 
 			oCourse.processDTW(null)
 
-			let result = oCourse.getResult()
+			result = oCourse.getResult()
 
-      			datagram = stalk.toDatagram([
+      			datagram85 = stalk.toDatagram([
 				'85', 
 				stalk.toHexString(result.X6),
 				stalk.toHexString(result.XX), 
@@ -37,7 +65,7 @@ module.exports = function (app) {
 				stalk.toHexString(result.yf)
 			])
 
-			datagrams.push(datagram)
+			datagrams.push(datagram85)
 
 			return datagrams
 		}
