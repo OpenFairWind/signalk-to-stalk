@@ -15,8 +15,8 @@
     <p>Read-only view of configured conversions, resolved state, and outgoing SeaTalk1 traffic</p>
   </div>
   <div class="header-status">
-    <span id="connectionState" class="pill">Connecting</span>
-    <span id="state" class="pill">Unknown</span>
+    <span id="connectionState" class="pill" role="status">Connecting</span>
+    <span id="state" class="pill" role="status">Unknown</span>
   </div>
 </header>
 <main>
@@ -85,12 +85,13 @@
     <div class="section-head activity-head">
       <div><h2>Live activity</h2><p>Outgoing datagrams, navigation events, suppressions, errors, and lifecycle changes</p></div>
       <div class="activity-controls">
-        <label>Show <select id="eventFilter"><option value="all">All events</option><option value="emitted">Emitted</option><option value="suppressed">Suppressed</option><option value="error">Errors</option><option value="navigation">Navigation</option><option value="lifecycle">Lifecycle</option></select></label>
-        <button id="pause" type="button" aria-pressed="false">Pause</button>
-        <button id="clear" type="button">Clear view</button>
+        <label for="eventFilter">Show</label>
+        <select id="eventFilter" aria-label="Filter live activity events"><option value="all">All events</option><option value="emitted">Emitted</option><option value="suppressed">Suppressed</option><option value="error">Errors</option><option value="navigation">Navigation</option><option value="lifecycle">Lifecycle</option></select>
+        <button id="pause" type="button" aria-pressed="false" aria-label="Pause live activity updates">Pause</button>
+        <button id="clear" type="button" aria-label="Clear visible activity rows">Clear view</button>
       </div>
     </div>
-    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>Command</th><th>Reason</th><th>Decoded details</th><th>Sentence / message</th></tr></thead><tbody id="events"></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Time</th><th scope="col">Type</th><th scope="col">Command</th><th scope="col">Reason</th><th scope="col">Decoded details</th><th scope="col">Sentence / message</th></tr></thead><tbody id="events"></tbody></table></div>
   </section>
 </main>
 <script src="app.js"></script>

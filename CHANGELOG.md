@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0
+
+- Promoted the aligned feature set to the 2.0.0 release target.
+- Hardened the read-only WebApp against malformed stream events and failed API responses.
+- Improved monitor accessibility, focus states, mobile wrapping, and compact dashboard spacing.
+- Closed telemetry stream clients on plugin stop so monitor sessions reconnect cleanly after restarts.
+- Kept plugin identity, output events, passive waypoint behavior, and strict configuration validation stable.
+
 ## 0.8.0
 
 - Aligned settings terminology with the WebApp feature names.

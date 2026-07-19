@@ -4,6 +4,8 @@
 
 The plugin is designed for installations that need to feed SeaTalk1-compatible equipment through a Signal K output path such as a STALK-capable NMEA 0183 provider, SeaTalk bridge, or adapter.
 
+Version 2.0.0 is the stable release target for the current datagram-manager architecture and read-only monitor.
+
 ## What It Does
 
 - Encodes direct navigation values such as position, speed over ground, course over ground, UTC time, and UTC date.

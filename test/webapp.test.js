@@ -22,3 +22,12 @@ test('WebApp remains read-only', () => {
   assert.match(js, /eventFilter/)
   assert.match(js, /Pause/)
 })
+
+test('WebApp handles degraded API and stream states without losing read-only behavior', () => {
+  assert.match(js, /safeJson/)
+  assert.match(js, /Stream data error/)
+  assert.match(js, /Stream reconnecting/)
+  assert.match(js, /apiGet/)
+  assert.match(html, /aria-label="Filter live activity events"/)
+  assert.match(html, /scope="col"/)
+})

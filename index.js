@@ -47,7 +47,7 @@ module.exports = function createPlugin(app) {
     plugin.unitsManager = undefined
     plugin.lightsManager = undefined
     plugin.calibrationManager = undefined
-    plugin.telemetry.setRunning(false, 'Stopped')
+    plugin.telemetry.stop()
     if (typeof app.setPluginStatus === 'function') app.setPluginStatus('Stopped')
   }
 

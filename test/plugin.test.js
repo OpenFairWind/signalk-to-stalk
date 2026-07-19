@@ -59,6 +59,15 @@ test('start is restart-safe and stop clears unsubscribe callbacks', () => {
   assert.equal(app.status.at(-1), 'Stopped')
 })
 
+test('stop closes telemetry stream clients', () => {
+  const app = mockApp()
+  const plugin = loadPluginFactory()(app)
+  let closed = false
+  plugin.telemetry.attachSse({ on() {} }, { writeHead() {}, write() {}, end() { closed = true } })
+  plugin.stop()
+  assert.equal(closed, true)
+})
+
 
 test('registerWithRouter exposes read-only monitor APIs', () => {
   const app = mockApp()

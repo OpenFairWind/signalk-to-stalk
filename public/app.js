@@ -4,6 +4,7 @@ const rows = $('events')
 let rowCount = 0
 let paused = false
 let filter = 'all'
+let refreshTimer
 
 function finite(value) { return Number.isFinite(value) }
 function fmt(value, digits = 1) { return finite(value) ? Number(value).toFixed(digits) : '—' }
@@ -15,6 +16,7 @@ function escapeHtml(value) { const node = document.createElement('div'); node.te
 function commandLabel(value) { return value ? String(value).toUpperCase() : '—' }
 function title(value) { return value ? String(value).replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()) : '—' }
 function setPill(id, text, tone = '') { const node = $(id); node.textContent = text; node.className = `pill ${tone}`.trim() }
+function safeJson(value) { try { return JSON.parse(value) } catch (_) { return undefined } }
 
 function render(snapshot) {
   const config = snapshot.configuration || {}
@@ -100,6 +102,7 @@ function renderCounters(counters) {
 }
 
 function add(event) {
+  if (!event || typeof event !== 'object') return
   if (paused || !['emitted', 'error', 'navigation', 'suppressed', 'lifecycle'].includes(event.type)) return
   const details = event.values || compact({ unitSystem: event.unitSystem, waypointName: event.waypointName, lightLevel: event.lightLevel, sourcePath: event.sourcePath, sourceValue: event.sourceValue, level: event.level, active: event.active })
   const row = document.createElement('tr')
@@ -114,17 +117,43 @@ function compact(object) { return Object.fromEntries(Object.entries(object).filt
 function applyFilter() { for (const row of rows.children) row.hidden = filter !== 'all' && row.dataset.type !== filter }
 
 async function refresh() {
-  const response = await fetch('api/status', { cache: 'no-store' })
-  if (!response.ok) throw new Error(`Status request failed: ${response.status}`)
-  render(await response.json())
+  const response = await apiGet('api/status')
+  render(response)
   setPill('connectionState', 'Live connection', 'ok')
 }
 
-Promise.all([refresh(), fetch('api/recent?limit=200', { cache: 'no-store' }).then(response => response.json()).then(events => events.forEach(add))]).catch(() => setPill('connectionState', 'API unavailable', 'bad'))
-const stream = new EventSource('api/stream')
-stream.onopen = () => setPill('connectionState', 'Live connection', 'ok')
-stream.onmessage = event => { const value = JSON.parse(event.data); if (value.type === 'snapshot') render(value); else { add(value); refresh().catch(() => {}) } }
-stream.onerror = () => setPill('connectionState', 'Stream disconnected', 'bad')
+async function apiGet(url) {
+  const response = await fetch(url, { cache: 'no-store' })
+  if (!response.ok) throw new Error(`${url} failed: ${response.status}`)
+  return response.json()
+}
+function scheduleRefresh() {
+  clearTimeout(refreshTimer)
+  refreshTimer = setTimeout(() => refresh().catch(() => setPill('connectionState', 'API unavailable', 'bad')), 150)
+}
+
+Promise.all([
+  refresh(),
+  apiGet('api/recent?limit=200').then(events => Array.isArray(events) && events.forEach(add))
+]).catch(() => setPill('connectionState', 'API unavailable', 'bad'))
+
+if ('EventSource' in window) {
+  const stream = new EventSource('api/stream')
+  stream.onopen = () => setPill('connectionState', 'Live connection', 'ok')
+  stream.onmessage = event => {
+    const value = safeJson(event.data)
+    if (!value) return setPill('connectionState', 'Stream data error', 'warn')
+    if (value.type === 'snapshot') render(value)
+    else {
+      add(value)
+      scheduleRefresh()
+    }
+  }
+  stream.onerror = () => setPill('connectionState', 'Stream reconnecting', 'warn')
+} else {
+  setPill('connectionState', 'Polling', 'warn')
+  setInterval(() => refresh().catch(() => setPill('connectionState', 'API unavailable', 'bad')), 5000)
+}
 $('clear').onclick = () => { rows.innerHTML = ''; rowCount = 0 }
 $('pause').onclick = () => { paused = !paused; $('pause').textContent = paused ? 'Resume' : 'Pause'; $('pause').setAttribute('aria-pressed', String(paused)) }
 $('eventFilter').onchange = event => { filter = event.target.value; applyFilter() }
