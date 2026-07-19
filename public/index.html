@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#087ea4">
+  <title>Signal K to SeaTalk Monitor</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div>
+    <h1>Signal K → SeaTalk Monitor</h1>
+    <p>Read-only view of configured conversions, resolved state, and outgoing SeaTalk1 traffic</p>
+  </div>
+  <div class="header-status">
+    <span id="connectionState" class="pill">Connecting</span>
+    <span id="state" class="pill">Unknown</span>
+  </div>
+</header>
+<main>
+  <section class="cards" aria-label="Plugin summary">
+    <article><h2>Emitted</h2><strong id="emitted">0</strong><small>SeaTalk datagrams</small></article>
+    <article><h2>Suppressed</h2><strong id="suppressed">0</strong><small>stale, duplicate, or limited</small></article>
+    <article><h2>Errors</h2><strong id="errors">0</strong><small>encoding or manager failures</small></article>
+    <article><h2>Waypoint</h2><strong id="target">—</strong><small id="navdetail">Guidance disabled</small></article>
+    <article><h2>Display units</h2><strong id="units">—</strong><small id="unitsdetail">Synchronization disabled</small></article>
+    <article><h2>Display lighting</h2><strong id="lights">—</strong><small id="lightsdetail">Synchronization disabled</small></article>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><div><h2>Configured features</h2><p>What the Signal K plugin settings currently enable. Runtime state is shown separately below.</p></div></div>
+    <div id="features" class="feature-grid"></div>
+  </section>
+
+  <section class="nav panel">
+    <div id="compass" aria-label="Waypoint bearing"><span class="north">N</span><div id="needle"></div><span class="wp">WP</span></div>
+    <div class="nav-data"><div class="section-head compact"><div><h2>Waypoint guidance</h2><p>Passive 0x82 / 0x85 output; this does not engage or steer the autopilot.</p></div><span id="navpill" class="pill">Disabled</span></div><dl>
+      <dt>Runtime state</dt><dd id="navstatus">Disabled</dd>
+      <dt>Target</dt><dd id="navtarget">—</dd>
+      <dt>Bearing</dt><dd id="bearing">—</dd>
+      <dt>Bearing reference</dt><dd id="bearingref">—</dd>
+      <dt>Distance</dt><dd id="distance">—</dd>
+      <dt>Cross-track error</dt><dd id="xte">—</dd>
+      <dt>Refresh interval</dt><dd id="navrefresh">—</dd>
+      <dt>Maximum data age</dt><dd id="navmaxage">—</dd>
+    </dl></div>
+  </section>
+
+  <section class="panel calibration-panel">
+    <div class="section-head"><div><h2>Speed calibration advisor</h2><p>Read-only estimate based on the configured measured and reference Signal K paths.</p></div><span id="calstate" class="pill">Disabled</span></div>
+    <div class="cal-grid">
+      <article><h3>Suggested ST60 speed factor</h3><dl>
+        <dt>Measured path</dt><dd id="calmeasuredpath">—</dd>
+        <dt>Reference path</dt><dd id="calreferencepath">—</dd>
+        <dt>Current factor</dt><dd id="calcurrent">—</dd>
+        <dt>Correction multiplier</dt><dd id="calmultiplier">—</dd>
+        <dt>Suggested factor</dt><dd id="calsuggested">—</dd>
+        <dt>Median measured / reference</dt><dd id="calspeeds">—</dd>
+        <dt>Accepted samples</dt><dd id="calsamples">—</dd>
+        <dt>Observed spread / limit</dt><dd id="calstability">—</dd>
+        <dt>Minimum accepted speed</dt><dd id="calminspeed">—</dd>
+      </dl></article>
+      <aside class="cal-warning"><strong>Calibration guidance</strong><p id="caladvisory">Enable the advisor to collect observations.</p><p>GPS speed over ground is not water speed when current or tide is present. Validate in slack water or use reciprocal measured-distance runs before changing an instrument.</p></aside>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><div><h2>Datagram counters</h2><p>Messages emitted since this plugin process started</p></div></div>
+    <div id="counters" class="counter-grid"></div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><div><h2>Runtime</h2><p id="statusText">Waiting for status</p></div></div>
+    <dl class="runtime">
+      <dt>Output event</dt><dd id="outputEvent">stalkout</dd>
+      <dt>Plugin started</dt><dd id="startedAt">—</dd>
+      <dt>Telemetry history</dt><dd id="history">—</dd>
+      <dt>Snapshot updated</dt><dd id="lastUpdate">—</dd>
+    </dl>
+  </section>
+
+  <section class="panel">
+    <div class="section-head activity-head">
+      <div><h2>Live activity</h2><p>Outgoing datagrams, navigation events, suppressions, errors, and lifecycle changes</p></div>
+      <div class="activity-controls">
+        <label>Show <select id="eventFilter"><option value="all">All events</option><option value="emitted">Emitted</option><option value="suppressed">Suppressed</option><option value="error">Errors</option><option value="navigation">Navigation</option><option value="lifecycle">Lifecycle</option></select></label>
+        <button id="pause" type="button" aria-pressed="false">Pause</button>
+        <button id="clear" type="button">Clear view</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>Command</th><th>Reason</th><th>Decoded details</th><th>Sentence / message</th></tr></thead><tbody id="events"></tbody></table></div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
