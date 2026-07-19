@@ -6,10 +6,12 @@
   "type": "commonjs",
   "files": [
     "CHANGELOG.md",
+    "AGENTS.md",
     "LICENSE",
     "README.md",
     "calibration-manager.js",
     "datagrams/",
+    "docs/",
     "index.js",
     "lights-manager.js",
     "public/",
