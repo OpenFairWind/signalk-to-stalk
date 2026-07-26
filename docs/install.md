@@ -11,7 +11,7 @@
 When published, install the package in the usual Signal K plugin workflow:
 
 ```bash
-npm install @signalk/signalk-to-stalk
+npm install signalk-to-stalk
 ```
 
 Then restart the Signal K server if your installation flow does not restart it automatically.

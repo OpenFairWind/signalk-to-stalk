@@ -1,5 +1,5 @@
 {
-  "name": "@signalk/signalk-to-stalk",
+  "name": "signalk-to-stalk",
   "version": "2.0.0",
   "description": "Signal K server plugin and read-only WebApp converting navigation data to SeaTalk1 with coherent settings, waypoint, units, lights, diagnostics, and calibration advice",
   "main": "index.js",

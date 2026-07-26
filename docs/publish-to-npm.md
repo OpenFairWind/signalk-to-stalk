@@ -1,7 +1,7 @@
 # Publishing and updating the package on npm
 
-This guide describes how to publish `@signalk/signalk-to-stalk` to the public
-[npm registry](https://www.npmjs.com/package/@signalk/signalk-to-stalk) for the
+This guide describes how to publish `signalk-to-stalk` to the public
+[npm registry](https://www.npmjs.com/package/signalk-to-stalk) for the
 first time and how to release subsequent versions.
 
 Run all commands from the repository root.
@@ -13,7 +13,7 @@ You need:
 - Node.js 18 or newer;
 - a current npm CLI;
 - an npm account with two-factor authentication (2FA) enabled;
-- permission to publish packages in the `@signalk` npm organization; and
+- permission to publish the `signalk-to-stalk` npm package; and
 - permission to push commits and tags to
   `https://github.com/OpenFairWind/signalk-to-stalk`.
 
@@ -54,9 +54,9 @@ For an interactive release, prefer account 2FA and enter the one-time code when
 npm prompts for it. Do not store passwords, recovery codes, or npm tokens in
 this repository.
 
-If `npm publish` reports a permission error, ask an owner of the `@signalk`
-organization to grant the npm account write access to the package. GitHub
-organization membership does not automatically grant npm organization access.
+If `npm publish` reports a permission error, ask a package owner to grant the
+npm account write access to the package. GitHub organization membership does
+not automatically grant npm package access.
 
 ## 2. Prepare the release
 
@@ -81,7 +81,7 @@ Before changing the version:
 
 1. Update `CHANGELOG.md` with the release date and user-visible changes.
 2. Confirm that `package.json` still contains:
-   - the name `@signalk/signalk-to-stalk`;
+   - the name `signalk-to-stalk`;
    - the repository
      `https://github.com/OpenFairWind/signalk-to-stalk`; and
    - the intended `files` whitelist.
@@ -125,7 +125,7 @@ npm pack
 Inspect its contents, replacing `<version>` with the current package version:
 
 ```bash
-tar -tzf signalk-signalk-to-stalk-<version>.tgz
+tar -tzf signalk-to-stalk-<version>.tgz
 ```
 
 Delete the generated `.tgz` after inspection. It is a local build artifact and
@@ -138,8 +138,8 @@ reused. Check the local and published versions:
 
 ```bash
 npm pkg get version
-npm view @signalk/signalk-to-stalk version
-npm view @signalk/signalk-to-stalk versions --json
+npm view signalk-to-stalk version
+npm view signalk-to-stalk versions --json
 ```
 
 Choose the version according to semantic versioning:
@@ -178,8 +178,7 @@ npm pack --dry-run
 
 ### First publication
 
-This is a scoped package, and scoped packages must explicitly be made public on
-their first publication:
+Publish the package publicly:
 
 ```bash
 npm publish --access public
@@ -226,22 +225,22 @@ and publish a new release instead.
 Confirm the registry version and tags:
 
 ```bash
-npm view @signalk/signalk-to-stalk version
-npm view @signalk/signalk-to-stalk dist-tags
-npm view @signalk/signalk-to-stalk@<version>
+npm view signalk-to-stalk version
+npm view signalk-to-stalk dist-tags
+npm view signalk-to-stalk@<version>
 ```
 
 Confirm that the published archive contains the expected files:
 
 ```bash
-npm pack @signalk/signalk-to-stalk@<version>
-tar -tzf signalk-signalk-to-stalk-<version>.tgz
+npm pack signalk-to-stalk@<version>
+tar -tzf signalk-to-stalk-<version>.tgz
 ```
 
 Delete this verification archive after inspection.
 
 Finally, open the
-[package page on npm](https://www.npmjs.com/package/@signalk/signalk-to-stalk)
+[package page on npm](https://www.npmjs.com/package/signalk-to-stalk)
 and verify its version, README, repository link, license, and files.
 
 ## 7. Push the release commit and tag
@@ -277,7 +276,7 @@ If a published version should not be installed, deprecate that version and
 direct users to the replacement:
 
 ```bash
-npm deprecate @signalk/signalk-to-stalk@<bad-version> \
+npm deprecate signalk-to-stalk@<bad-version> \
   "Do not use this release; install <replacement-version> instead."
 ```
 
@@ -303,7 +302,7 @@ serious accidental publication after reviewing npm's current
 
 ## npm references
 
-- [Creating and publishing scoped public packages](https://docs.npmjs.com/creating-and-publishing-scoped-public-packages/)
+- [Creating and publishing unscoped public packages](https://docs.npmjs.com/creating-and-publishing-unscoped-public-packages/)
 - [Updating a published package version](https://docs.npmjs.com/updating-your-published-package-version-number)
 - [Two-factor authentication for publishing](https://docs.npmjs.com/requiring-2fa-for-package-publishing-and-settings-modification/)
 - [Deprecating package versions](https://docs.npmjs.com/deprecating-and-undeprecating-packages-or-package-versions/)
