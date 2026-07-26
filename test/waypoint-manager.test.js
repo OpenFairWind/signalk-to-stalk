@@ -42,6 +42,17 @@ test('navigation updates refresh 0x85 without repeating waypoint name', () => {
   f.manager.stop()
 })
 
+test('repeated updates for the same target do not repeat waypoint name', () => {
+  const f = fixture({ bearingReference: 'true' })
+  f.push('navigation.course.calcValues.distance', 1000)
+  f.push('navigation.course.calcValues.bearingTrue', 1)
+  f.push('navigation.course.nextPoint', { href: '/resources/waypoints/alpha' })
+  f.emitted.length = 0
+  f.push('navigation.course.nextPoint', { href: '/resources/waypoints/alpha' })
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85'])
+  f.manager.stop()
+})
+
 test('clearing canonical target emits one invalid 0x85 and clears state', () => {
   const f = fixture({ bearingReference: 'true' })
   f.push('navigation.course.calcValues.distance', 1000)

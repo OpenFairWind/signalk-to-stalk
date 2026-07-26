@@ -77,6 +77,10 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
       telemetry?.record({ type: 'navigation', action: 'target-cleared' })
       return
     }
+    if (active && identity === targetIdentity) {
+      publishNavigation(false)
+      return
+    }
     active = true
     targetIdentity = identity
     telemetry?.record({ type: 'navigation', action: 'target-selected', targetIdentity })
