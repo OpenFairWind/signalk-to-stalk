@@ -41,7 +41,7 @@ Managers receive the Signal K `app`, an `emitDatagram` callback when they transm
 
 ## Telemetry and WebApp
 
-`telemetry.js` keeps bounded recent events, counters, runtime state, resolved feature state, and configuration summaries. It also serves Server-Sent Events clients.
+`telemetry.js` keeps bounded recent events, counters, the last emitted sentence and bytes for every observed datagram, runtime state, resolved feature state, and configuration summaries. It also serves Server-Sent Events clients.
 
 The WebApp in `public/` consumes:
 
@@ -49,7 +49,7 @@ The WebApp in `public/` consumes:
 - `api/recent?limit=100` for bounded recent activity;
 - `api/stream` for live events.
 
-The WebApp is deliberately read-only. Local filtering and pause controls affect only browser rendering.
+The WebApp renders an indicator for every implemented SeaTalk command, including commands that are disabled or have not emitted yet. Each indicator combines its configured state with the process counter and latest observed datagram. The WebApp is deliberately read-only. Local filtering and pause controls affect only browser rendering.
 
 ## Schema Generation
 

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#087ea4">
   <title>Signal K to SeaTalk Monitor</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -32,6 +33,14 @@
   <section class="panel">
     <div class="section-head"><div><h2>Configured features</h2><p>What the Signal K plugin settings currently enable. Runtime state is shown separately below.</p></div></div>
     <div id="features" class="feature-grid"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="indicatorHeading">
+    <div class="section-head">
+      <div><h2 id="indicatorHeading">Datagram indicators</h2><p>Complete live coverage of every SeaTalk command implemented by this plugin.</p></div>
+      <span id="indicatorCoverage" class="pill">0 of 0 active</span>
+    </div>
+    <div id="indicators" class="indicator-grid" aria-live="polite"></div>
   </section>
 
   <section class="nav panel">

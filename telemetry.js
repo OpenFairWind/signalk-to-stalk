@@ -7,6 +7,7 @@ module.exports = function createTelemetry(options = {}) {
   const startedAt = new Date().toISOString()
   const counters = { emitted: 0, suppressed: 0, errors: 0 }
   const perDatagram = {}
+  const lastDatagrams = {}
   let running = false
   let status = 'Stopped'
   let navigation = {}
@@ -22,6 +23,11 @@ module.exports = function createTelemetry(options = {}) {
     if (item.type === 'emitted') {
       counters.emitted += 1
       perDatagram[item.datagram] = (perDatagram[item.datagram] || 0) + 1
+      lastDatagrams[item.datagram] = {
+        time: item.time,
+        sentence: item.sentence,
+        bytes: Array.isArray(item.bytes) ? [...item.bytes] : []
+      }
     } else if (item.type === 'suppressed') counters.suppressed += 1
     else if (item.type === 'error') counters.errors += 1
     const payload = `data: ${JSON.stringify(item)}\n\n`
@@ -40,6 +46,7 @@ module.exports = function createTelemetry(options = {}) {
       outputEvent: 'stalkout',
       totals: { ...counters },
       perDatagram: { ...perDatagram },
+      lastDatagrams: structuredCloneSafe(lastDatagrams),
       navigation: { ...navigation },
       units: { ...units },
       lights: { ...lights },

@@ -75,6 +75,7 @@ function render(snapshot) {
   $('caladvisory').textContent = calibration.advisory || 'Enable the advisor to collect observations.'
 
   renderFeatures(config)
+  renderIndicators(config, snapshot.perDatagram || {}, snapshot.lastDatagrams || {})
   renderCounters(snapshot.perDatagram || {})
   $('statusText').textContent = snapshot.status || '—'
   $('outputEvent').textContent = snapshot.outputEvent || 'stalkout'
@@ -95,6 +96,38 @@ function renderFeatures(config) {
   $('features').innerHTML = all.map(item => `<article class="feature ${item.enabled ? 'enabled' : 'disabled'}"><div class="feature-head"><div class="feature-title"><strong>${escapeHtml(item.command)}</strong><span>${escapeHtml(item.name)}</span></div><b class="feature-state">${enabledLabel(item.enabled)}</b></div><small>${escapeHtml(item.detail || '')}</small></article>`).join('')
 }
 function feature(command, name, enabled, detail) { return { command, name, enabled: Boolean(enabled), detail } }
+
+function renderIndicators(config, counters, latest) {
+  const direct = Array.isArray(config.direct) ? config.direct : []
+  const indicators = direct.map(item => ({
+    command: item.datagram,
+    name: item.title.replace(/^0x[0-9a-f]+\s*/i, ''),
+    enabled: item.enabled
+  })).concat([
+    { command: '0x24', name: 'Speed and distance display units', enabled: config.instrumentUnits?.enabled },
+    { command: '0x30', name: 'Display lamp intensity', enabled: config.instrumentLights?.enabled },
+    { command: '0x82', name: 'Target waypoint name', enabled: config.navigationToWaypoint?.enabled },
+    { command: '0x85', name: 'Navigation to waypoint', enabled: config.navigationToWaypoint?.enabled }
+  ]).sort((a, b) => a.command.localeCompare(b.command))
+
+  const active = indicators.filter(item => item.enabled).length
+  setPill('indicatorCoverage', `${active} of ${indicators.length} active`, active ? 'ok' : '')
+  $('indicators').innerHTML = indicators.map(item => {
+    const count = Number(counters[item.command]) || 0
+    const last = latest[item.command] || {}
+    const state = !item.enabled ? 'Disabled' : count ? 'Transmitting' : 'Waiting'
+    const tone = !item.enabled ? 'disabled' : count ? 'transmitting' : 'waiting'
+    const bytes = Array.isArray(last.bytes) && last.bytes.length ? last.bytes.join(' ') : 'No datagram observed'
+    return `<article class="indicator ${tone}">
+      <div class="indicator-head"><strong>${escapeHtml(item.command)}</strong><span>${escapeHtml(state)}</span></div>
+      <h3>${escapeHtml(item.name)}</h3>
+      <div class="indicator-count">${count.toLocaleString()}</div>
+      <small>emitted this process</small>
+      <code title="${escapeHtml(last.sentence || '')}">${escapeHtml(bytes)}</code>
+      <time datetime="${escapeHtml(last.time || '')}">${last.time ? `Last ${escapeHtml(new Date(last.time).toLocaleTimeString())}` : 'Not sent yet'}</time>
+    </article>`
+  }).join('')
+}
 
 function renderCounters(counters) {
   const entries = Object.entries(counters).sort(([a], [b]) => a.localeCompare(b))

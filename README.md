@@ -1,6 +1,6 @@
 # signalk-to-stalk
 
-Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.0 is the stable feature release for the current architecture.
+Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.2 is the stable feature release for the current architecture.
 
 The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTalk Technical Reference.
 

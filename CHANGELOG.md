@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.2
+
+- Added complete live indicator coverage for every implemented SeaTalk datagram.
+- Added latest sentence, bytes, timestamp, and process-count telemetry for each command.
+- Added a new accessible and maskable Signal K to SeaTalk WebApp icon.
+- Expanded WebApp and telemetry regression coverage while preserving read-only operation.
+
+## 2.0.1
+
+- Maintenance release aligning Signal K host-contract coverage and package metadata.
+
 ## 2.0.0
 
 - Promoted the aligned feature set to the 2.0.0 release target.

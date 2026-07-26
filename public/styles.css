@@ -70,6 +70,20 @@ dd{margin:0;font-weight:700;overflow-wrap:anywhere}
 .feature-state{font-size:12px;color:var(--muted);white-space:nowrap}
 .feature.enabled .feature-state{color:var(--good)}
 .feature small{display:block;line-height:1.4;overflow-wrap:anywhere}
+.indicator-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.indicator{border:1px solid var(--line);border-top:5px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:7px;min-width:0}
+.indicator.transmitting{border-top-color:var(--good)}
+.indicator.waiting{border-top-color:var(--warn)}
+.indicator.disabled{opacity:.68}
+.indicator-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.indicator-head strong{font:800 1rem ui-monospace,monospace}
+.indicator-head span{color:var(--muted);font-size:12px;font-weight:700}
+.indicator.transmitting .indicator-head span{color:var(--good)}
+.indicator.waiting .indicator-head span{color:var(--warn)}
+.indicator h3{min-height:2.8em}
+.indicator-count{font-size:1.65rem;font-weight:800;line-height:1}
+.indicator code{display:block;padding:7px;background:var(--soft);border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.indicator time{color:var(--muted);font-size:12px}
 .counter-grid{display:flex;flex-wrap:wrap;gap:10px}
 .counter-grid div{border:1px solid var(--line);border-radius:8px;padding:10px 14px;display:flex;gap:14px}
 .counter-grid strong{font-family:ui-monospace,monospace}

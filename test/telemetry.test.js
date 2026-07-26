@@ -5,12 +5,14 @@ const createTelemetry = require('../telemetry')
 
 test('telemetry bounds history and counts datagrams', () => {
   const t = createTelemetry({ capacity: 2 })
-  t.record({ type: 'emitted', datagram: '0x50' })
-  t.record({ type: 'emitted', datagram: '0x50' })
+  t.record({ type: 'emitted', datagram: '0x50', sentence: '$STALK,50', bytes: ['50'] })
+  t.record({ type: 'emitted', datagram: '0x50', sentence: '$STALK,50,02', bytes: ['50', '02'] })
   t.record({ type: 'error', message: 'bad' })
   assert.equal(t.recent(10).length, 2)
   assert.deepEqual(t.snapshot().totals, { emitted: 2, suppressed: 0, errors: 1 })
   assert.equal(t.snapshot().perDatagram['0x50'], 2)
+  assert.deepEqual(t.snapshot().lastDatagrams['0x50'].bytes, ['50', '02'])
+  assert.equal(t.snapshot().lastDatagrams['0x50'].sentence, '$STALK,50,02')
 })
 
 test('telemetry emits snapshot and live records over SSE', () => {
