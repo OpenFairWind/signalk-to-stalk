@@ -41,7 +41,7 @@ Managers receive the Signal K `app`, an `emitDatagram` callback when they transm
 
 ## Telemetry and WebApp
 
-`telemetry.js` keeps bounded recent events, counters, the last emitted sentence and bytes for every observed datagram, runtime state, resolved feature state, and configuration summaries. It also serves Server-Sent Events clients.
+`telemetry.js` keeps bounded recent events, counters, the last emitted sentence and bytes for every observed datagram, runtime state, resolved feature state, and configuration summaries. It also serves Server-Sent Events clients. Signal K mounts these read-only endpoints at `/plugins/signalk-to-stalk/api/status`, `/plugins/signalk-to-stalk/api/recent`, and `/plugins/signalk-to-stalk/api/stream`; the WebApp is mounted separately at `/signalk-to-stalk`.
 
 The WebApp in `public/` consumes:
 

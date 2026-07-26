@@ -1,6 +1,7 @@
 'use strict'
 const $ = id => document.getElementById(id)
 const rows = $('events')
+const apiBase = '/plugins/signalk-to-stalk/api/'
 let rowCount = 0
 let paused = false
 let filter = 'all'
@@ -150,13 +151,13 @@ function compact(object) { return Object.fromEntries(Object.entries(object).filt
 function applyFilter() { for (const row of rows.children) row.hidden = filter !== 'all' && row.dataset.type !== filter }
 
 async function refresh() {
-  const response = await apiGet('api/status')
+  const response = await apiGet('status')
   render(response)
   setPill('connectionState', 'Live connection', 'ok')
 }
 
 async function apiGet(url) {
-  const response = await fetch(url, { cache: 'no-store' })
+  const response = await fetch(`${apiBase}${url}`, { cache: 'no-store', credentials: 'include' })
   if (!response.ok) throw new Error(`${url} failed: ${response.status}`)
   return response.json()
 }
@@ -167,11 +168,11 @@ function scheduleRefresh() {
 
 Promise.all([
   refresh(),
-  apiGet('api/recent?limit=200').then(events => Array.isArray(events) && events.forEach(add))
+  apiGet('recent?limit=200').then(events => Array.isArray(events) && events.forEach(add))
 ]).catch(() => setPill('connectionState', 'API unavailable', 'bad'))
 
 if ('EventSource' in window) {
-  const stream = new EventSource('api/stream')
+  const stream = new EventSource(`${apiBase}stream`, { withCredentials: true })
   stream.onopen = () => setPill('connectionState', 'Live connection', 'ok')
   stream.onmessage = event => {
     const value = safeJson(event.data)

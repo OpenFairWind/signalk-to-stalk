@@ -31,3 +31,10 @@ test('WebApp handles degraded API and stream states without losing read-only beh
   assert.match(html, /aria-label="Filter live activity events"/)
   assert.match(html, /scope="col"/)
 })
+
+test('WebApp reads telemetry from the Signal K plugin API mount', () => {
+  assert.match(js, /['"]\/plugins\/signalk-to-stalk\/api\/['"]/)
+  assert.match(js, /credentials:\s*['"]include['"]/)
+  assert.match(js, /withCredentials:\s*true/)
+  assert.doesNotMatch(js, /(?:fetch|EventSource)\(['"]api\//)
+})
