@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.3
+
+- Prevented duplicate waypoint announcements when identical navigation updates arrive from multiple subscriptions.
+- Corrected the read-only monitor telemetry API paths.
+
 ## 2.0.2
 
 - Added complete live indicator coverage for every implemented SeaTalk datagram.
