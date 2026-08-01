@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.0.4
+
 ### Fixed
 
 - Announce SeaTalk1 `0x82` immediately when a Signal K destination is selected, without waiting for Course API bearing, distance, or cross-track calculations.
