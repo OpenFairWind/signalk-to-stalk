@@ -39,6 +39,22 @@ Stateful features live in manager modules:
 
 Managers receive the Signal K `app`, an `emitDatagram` callback when they transmit, feature options, and telemetry.
 
+Waypoint guidance has two independent flows:
+
+```text
+navigation.course.nextPoint
+  -> stable target identity and display-name resolution
+  -> duplicate-suppressed 0x82 announcement
+
+navigation.course.calcValues.*
+  -> freshness and bearing-reference selection
+  -> periodic or change-driven 0x85 guidance
+```
+
+The waypoint manager owns the active identity, resolved and announced names, calculation availability, suppression reason, and last emission times. A target change resets announcement ownership and sends `0x82` before attempting `0x85`. A better name for the same stable identity produces one replacement announcement; repeated equivalent updates do not.
+
+Canonical `navigation.course.nextPoint` state is authoritative once that path has emitted. In particular, a canonical null clears the target even if a legacy path retains an older value. Before the canonical path has emitted, the first usable legacy great-circle or rhumb-line value is accepted. This avoids combining a current canonical target with stale legacy state.
+
 ## Telemetry and WebApp
 
 `telemetry.js` keeps bounded recent events, counters, the last emitted sentence and bytes for every observed datagram, runtime state, resolved feature state, and configuration summaries. It also serves Server-Sent Events clients. Signal K mounts these read-only endpoints at `/plugins/signalk-to-stalk/api/status`, `/plugins/signalk-to-stalk/api/recent`, and `/plugins/signalk-to-stalk/api/stream`; the WebApp is mounted separately at `/signalk-to-stalk`.

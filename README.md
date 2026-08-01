@@ -7,7 +7,7 @@ The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTa
 ## Features
 
 - Direct datagram conversions for position, speed over ground, course over ground, UTC time, and UTC date.
-- Passive target waypoint guidance using SeaTalk commands `0x82` and `0x85`.
+- Passive target waypoint guidance that announces `0x82` immediately and sends `0x85` when fresh calculations are available.
 - SeaTalk display-unit synchronization using command `0x24`.
 - SeaTalk display-light synchronization using command `0x30`.
 - Read-only WebApp monitor with runtime status, counters, recent activity, and calibration advice.
