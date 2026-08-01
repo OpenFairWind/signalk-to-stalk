@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Announce SeaTalk1 `0x82` immediately when a Signal K destination is selected, without waiting for Course API bearing, distance, or cross-track calculations.
+- Decouple `0x82` target announcements from `0x85` calculation availability and freshness.
+- Improve duplicate suppression, waypoint transitions, name upgrades, diagnostics, and regression coverage.
+
 ## 2.0.3
 
 - Prevented duplicate waypoint announcements when identical navigation updates arrive from multiple subscriptions.

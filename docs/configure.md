@@ -35,12 +35,13 @@ Example:
 }
 ```
 
-When a target is selected or advanced, the plugin waits for available navigation values and emits:
+When a target is selected or advanced, the plugin emits:
 
-1. `0x85` with bearing, range, cross-track error, and validity flags.
-2. `0x82` with the target identifier.
+1. `0x82` immediately with the target identifier.
+2. `0x85` with bearing, range, cross-track error, and validity flags when at least one supported calculated value is available and fresh.
 
 Subsequent calculation changes refresh `0x85` without repeatedly announcing `0x82`.
+A Course API calculation provider such as `@signalk/course-provider` may be needed to produce bearing, range, or cross-track error, but it is not required to announce the target waypoint. Stale or missing calculations suppress only `0x85`; they never delay a new `0x82` announcement.
 
 When the target is cleared, the default behavior is to emit one `0x85` with all validity flags cleared and stop periodic navigation output. Sending a fallback `0x82` during clear is optional and disabled by default.
 
@@ -56,7 +57,7 @@ In magnetic mode, if only true bearing and magnetic variation are available, the
 
 ### Stale Data
 
-`maximumAgeMs` suppresses periodic output when the navigation values used in the current datagram have not been refreshed recently.
+`maximumAgeMs` suppresses `0x85` output when the calculated navigation values used in the current datagram have not been refreshed recently. Fresh calculation updates resume `0x85` output without re-announcing an unchanged target.
 
 ## Display Units
 

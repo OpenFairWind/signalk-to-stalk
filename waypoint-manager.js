@@ -18,11 +18,18 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
   const encode85 = create85().f
   const state = Object.fromEntries(Object.keys(PATHS).map(key => [key, new Map()]))
   const unsubscribes = []
+  const now = typeof options.now === 'function' ? options.now : Date.now
   let timer
   let targetIdentity
   let announcedIdentity
+  let resolvedWaypointName
+  let announcedName
+  let announcedNameQuality = -1
   let active = false
+  let calculationsAvailable = false
+  let lastWaypointAt = 0
   let lastNavigationAt = 0
+  let lastSuppressionReason
 
   const config = {
     updateIntervalMs: numberOption(options.updateIntervalMs, 1000, 100),
@@ -53,54 +60,93 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
   }
 
   function update(field, path, priority, value) {
-    state[field].set(path, { value, priority, timestamp: Date.now() })
-    if (field === 'nextPoint') handleTargetChange()
+    state[field].set(path, { value, priority, timestamp: now() })
+    if (field === 'nextPoint' || (field === 'activeRoute' && active)) handleTargetChange()
     else if (active) publishNavigation(false)
   }
 
   function current(field) {
     const entries = Array.from(state[field].values()).sort((a, b) => a.priority - b.priority)
-    const selected = entries[0]
-    return selected?.value == null ? undefined : selected
+    if (entries[0]?.priority === 0) return entries[0].value == null ? undefined : entries[0]
+    return entries.find(entry => entry.value != null)
   }
 
   function handleTargetChange() {
     const target = current('nextPoint')?.value
     const identity = targetIdentityOf(target)
     if (!identity) {
-      if (active && config.sendInvalidOnClear) emit('0x85', create85.invalidNavigation(), { reason: 'target-cleared' })
-      if (active && config.sendWaypointNameOnClear) emit('0x82', encode82('', config.waypointNameFallback), { reason: 'target-cleared' })
-      active = false
-      targetIdentity = undefined
-      announcedIdentity = undefined
-      telemetry?.setNavigation({ active: false })
-      telemetry?.record({ type: 'navigation', action: 'target-cleared' })
+      clearTarget()
       return
     }
-    if (active && identity === targetIdentity) {
-      publishNavigation(false)
-      return
-    }
+    const resolved = resolveWaypoint(target, current('activeRoute')?.value, app, config.waypointNameFallback)
+    const name = resolved.name
+    const targetChanged = !active || identity !== targetIdentity
     active = true
     targetIdentity = identity
-    telemetry?.record({ type: 'navigation', action: 'target-selected', targetIdentity })
-    publishNavigation(true)
+    resolvedWaypointName = name
+    if (targetChanged) telemetry?.record({ type: 'navigation', action: 'target-selected', targetIdentity })
+    if (targetChanged || announcedIdentity !== identity || (announcedName !== name && resolved.quality >= announcedNameQuality)) {
+      announceWaypoint(name, resolved.quality, targetChanged ? 'target-change' : 'waypoint-name-change')
+    }
+    publishNavigation(targetChanged)
+  }
+
+  function announceWaypoint(name, quality, reason) {
+    emit('0x82', encode82(name, config.waypointNameFallback), { reason, waypointName: name, targetIdentity })
+    announcedIdentity = targetIdentity
+    announcedName = name
+    announcedNameQuality = quality
+    lastWaypointAt = now()
+    telemetry?.record({ type: 'navigation', action: reason === 'waypoint-name-change' ? 'waypoint-name-updated' : 'waypoint-announced', targetIdentity, waypointName: name })
+    updateTelemetry()
+  }
+
+  function clearTarget() {
+    if (!active) return
+    if (config.sendInvalidOnClear) emit('0x85', create85.invalidNavigation(), { reason: 'target-cleared' })
+    if (config.sendWaypointNameOnClear) emit('0x82', encode82('', config.waypointNameFallback), { reason: 'target-cleared' })
+    active = false
+    targetIdentity = undefined
+    announcedIdentity = undefined
+    resolvedWaypointName = undefined
+    announcedName = undefined
+    announcedNameQuality = -1
+    calculationsAvailable = false
+    lastWaypointAt = 0
+    lastNavigationAt = 0
+    lastSuppressionReason = undefined
+    updateTelemetry()
+    telemetry?.record({ type: 'navigation', action: 'target-cleared' })
   }
 
   function publishNavigation(targetChanged) {
-    if (!active) return
+    if (!active) return false
     const snapshot = navigationSnapshot()
-    if (!snapshot) return
-    const now = Date.now()
-    if (now - snapshot.oldest > config.maximumAgeMs) return
-    emit('0x85', encode85(snapshot.values), { reason: targetChanged ? 'target-change' : 'navigation-refresh', values: snapshot.values })
-    lastNavigationAt = now
-    if (targetChanged || announcedIdentity !== targetIdentity) {
-      const name = resolveWaypointName(current('nextPoint')?.value, current('activeRoute')?.value, app, config.waypointNameFallback)
-      emit('0x82', encode82(name, config.waypointNameFallback), { reason: 'waypoint-name', waypointName: name })
-      announcedIdentity = targetIdentity
-    }
-    telemetry?.setNavigation({ active, targetIdentity, announcedIdentity, lastNavigationAt, ...snapshot.values })
+    if (!snapshot) return suppressNavigation('navigation-unavailable')
+    const emittedAt = now()
+    if (emittedAt - snapshot.oldest > config.maximumAgeMs) return suppressNavigation('navigation-stale', { ageMs: emittedAt - snapshot.oldest })
+    calculationsAvailable = true
+    lastSuppressionReason = undefined
+    emit('0x85', encode85(snapshot.values), { reason: targetChanged ? 'target-change' : 'navigation-refresh', values: snapshot.values, targetIdentity })
+    lastNavigationAt = emittedAt
+    telemetry?.record({ type: 'navigation', action: 'navigation-emitted', targetIdentity })
+    updateTelemetry(snapshot.values)
+    return true
+  }
+
+  function suppressNavigation(reason, details = {}) {
+    calculationsAvailable = false
+    lastSuppressionReason = reason
+    telemetry?.record({ type: 'navigation', action: 'navigation-suppressed', reason, targetIdentity, ...details })
+    updateTelemetry()
+    return false
+  }
+
+  function updateTelemetry(values = {}) {
+    telemetry?.setNavigation({
+      active, targetIdentity, resolvedWaypointName, announcedIdentity, announcedName,
+      calculationsAvailable, lastWaypointAt, lastNavigationAt, lastSuppressionReason, ...values
+    })
   }
 
   function navigationSnapshot() {
@@ -133,34 +179,43 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     }
   }
 
-  return { start, stop, getState: () => ({ active, targetIdentity, announcedIdentity, lastNavigationAt }) }
+  return { start, stop, getState: () => ({ active, targetIdentity, resolvedWaypointName, announcedIdentity, announcedName, calculationsAvailable, lastWaypointAt, lastNavigationAt, lastSuppressionReason }) }
 }
 
 function targetIdentityOf(target) {
   if (!target || typeof target !== 'object') return undefined
-  if (target.href) return `href:${target.href}`
+  if (typeof target.href === 'string' && target.href.trim()) return `href:${target.href.trim()}`
+  const explicitId = target.ID ?? target.id
+  if (explicitId != null && String(explicitId).trim()) return `id:${String(explicitId).trim()}`
   const position = target.position || target
   if (Number.isFinite(position.latitude) && Number.isFinite(position.longitude)) {
     return `position:${position.latitude.toFixed(7)},${position.longitude.toFixed(7)}`
   }
-  if (target.ID || target.id || target.name) return `name:${target.ID || target.id || target.name}`
+  if (typeof target.name === 'string' && target.name.trim()) return `name:${target.name.trim()}`
   return undefined
 }
 
 function resolveWaypointName(target, activeRoute, app, fallback) {
-  if (!target) return fallback
-  for (const candidate of [target.name, target.ID, target.id]) if (candidate) return candidate
+  return resolveWaypoint(target, activeRoute, app, fallback).name
+}
+
+function resolveWaypoint(target, activeRoute, app, fallback) {
+  if (!target) return { name: fallback, quality: 0 }
+  for (const candidate of [target.name, target.ID, target.id]) if (candidate) return { name: candidate, quality: 4 }
   if (target.href && typeof app.getPath === 'function') {
     try {
       const resource = app.getPath(target.href.replace(/^\//, '').replace(/^resources\//, 'resources.').replaceAll('/', '.')) || app.getPath(target.href)
-      if (resource?.name) return resource.name
+      if (resource?.name) return { name: resource.name, quality: 3 }
     } catch (error) { app.debug(`Waypoint resource lookup failed: ${error.message}`) }
   }
   const index = activeRoute?.pointIndex
   const point = Number.isInteger(index) ? activeRoute?.waypoints?.[index] : undefined
-  if (point?.name || point?.ID || point?.id) return point.name || point.ID || point.id
-  if (target.href) return target.href.split('/').filter(Boolean).at(-1)
-  return fallback
+  if (point?.name || point?.ID || point?.id) return { name: point.name || point.ID || point.id, quality: 2 }
+  if (target.href) {
+    const segment = target.href.split('/').filter(Boolean).at(-1)
+    if (segment) return { name: segment, quality: 1 }
+  }
+  return { name: fallback, quality: 0 }
 }
 
 function numberOption(value, fallback, minimum) {
