@@ -4,7 +4,7 @@
 
 The plugin is designed for installations that need to feed SeaTalk1-compatible equipment through a Signal K output path such as a STALK-capable NMEA 0183 provider, SeaTalk bridge, or adapter.
 
-Version 2.0.4 is the stable release target for the current datagram-manager architecture and read-only monitor.
+Version 2.0.5 is the stable release target for the current datagram-manager architecture and read-only monitor.
 
 ## What It Does
 
@@ -12,7 +12,7 @@ Version 2.0.4 is the stable release target for the current datagram-manager arch
 - Provides passive target waypoint guidance with SeaTalk commands `0x82` and `0x85`.
 - Optionally synchronizes SeaTalk display speed and distance units with command `0x24`.
 - Optionally synchronizes SeaTalk display lighting with command `0x30`.
-- Provides a read-only WebApp monitor with runtime status, recent activity, counters, and calibration advice.
+- Provides a read-only WebApp monitor with runtime status, recent activity, counters, and speed and heading calibration advice.
 
 ## Safety Boundary
 

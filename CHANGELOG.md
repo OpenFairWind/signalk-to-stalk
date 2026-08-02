@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 2.0.5 - 2026-08-02
+
+### Fixed
+
+- Corrected SeaTalk1 `0x85` framing by emitting its required complement byte and complete passive mode-5 navigation data.
+- Send navigation data before the `0x82` waypoint announcement on target changes, as required by SeaTalk1 receivers.
+- Suppress malformed partial and clear-state `0x85` frames that could cause random alarms, no-data indications, or corrupted instrument values.
+- Added a regression vector from real Freeboard Signal K course data.
+
+### Added
+
+- Added a read-only ST60 heading-alignment advisor using circular statistics, variation-corrected GPS course, minimum-speed filtering, sample thresholds, and stability reporting.
+- Added heading-calibration settings, telemetry, WebApp presentation, documentation, and regression coverage.
+
 ## 2.0.4
 
 ### Fixed

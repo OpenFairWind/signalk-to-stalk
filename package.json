@@ -1,6 +1,6 @@
 {
   "name": "signalk-to-stalk",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "Signal K server plugin and read-only WebApp converting navigation data to SeaTalk1 with coherent settings, waypoint, units, lights, diagnostics, and calibration advice",
   "main": "index.js",
   "type": "commonjs",
@@ -50,7 +50,8 @@
     "brightness",
     "illumination",
     "calibration",
-    "st60-speed"
+    "st60-speed",
+    "st60-heading"
   ],
   "repository": {
     "type": "git",

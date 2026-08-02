@@ -1,16 +1,16 @@
 # signalk-to-stalk
 
-Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.4 is the stable feature release for the current architecture.
+Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.5 is the stable feature release for the current architecture.
 
 The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTalk Technical Reference.
 
 ## Features
 
 - Direct datagram conversions for position, speed over ground, course over ground, UTC time, and UTC date.
-- Passive target waypoint guidance that announces `0x82` immediately and sends `0x85` when fresh calculations are available.
+- Passive target waypoint guidance that emits complete mode-5 `0x85` data before the `0x82` target announcement when fresh calculations are available.
 - SeaTalk display-unit synchronization using command `0x24`.
 - SeaTalk display-light synchronization using command `0x30`.
-- Read-only WebApp monitor with runtime status, counters, recent activity, and calibration advice.
+- Read-only WebApp monitor with runtime status, counters, recent activity, and speed and heading calibration advice.
 
 ## Documentation
 
@@ -56,7 +56,7 @@ Sentences include a checksum and `CR/LF`.
 
 After installation and server restart, open **Signal K to SeaTalk Monitor** from the Signal K WebApps page.
 
-The monitor shows configured features, runtime state, live outgoing datagrams, suppressions, errors, per-command counters, waypoint state, synchronized units, display-light state, and calibration advice. It is read-only.
+The monitor shows configured features, runtime state, live outgoing datagrams, suppressions, errors, per-command counters, waypoint state, synchronized units, display-light state, and speed and heading calibration advice. It is read-only.
 
 ## Development
 
