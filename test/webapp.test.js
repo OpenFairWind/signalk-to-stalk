@@ -8,10 +8,10 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'),
 const js = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.js'), 'utf8')
 
 test('WebApp exposes all implemented feature groups and runtime diagnostics', () => {
-  for (const text of ['Waypoint guidance', 'Display units', 'Display lighting', 'Configured features', 'Datagram indicators', 'Complete live coverage', 'Datagram counters', 'Suppressed', 'Runtime', 'Live activity', 'Speed calibration advisor', 'Suggested factor', 'Calibration guidance', 'Live connection']) {
+  for (const text of ['Waypoint guidance', 'Display units', 'Display lighting', 'Configured features', 'Datagram indicators', 'Complete live coverage', 'Datagram counters', 'Suppressed', 'Runtime', 'Live activity', 'Speed calibration advisor', 'Suggested factor', 'Calibration guidance', 'Suggested ST60 heading alignment', 'Heading guidance', 'Live connection']) {
     assert.match(html + js, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'))
   }
-  for (const field of ['configuration', 'perDatagram', 'lastDatagrams', 'renderIndicators', 'bearingReference', 'maximumAgeMs', 'signalKPath', 'periodicRefreshSeconds', 'calibration', 'suggestedCalibrationFactor', 'minimumSpeedMps', 'maximumRelativeSpread']) {
+  for (const field of ['configuration', 'perDatagram', 'lastDatagrams', 'renderIndicators', 'bearingReference', 'maximumAgeMs', 'signalKPath', 'periodicRefreshSeconds', 'calibration', 'suggestedCalibrationFactor', 'minimumSpeedMps', 'maximumRelativeSpread', 'headingCalibration', 'suggestedHeadingOffsetDegrees']) {
     assert.match(js, new RegExp(field))
   }
 })

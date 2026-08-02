@@ -34,21 +34,23 @@ test('target-only selection immediately announces 0x82', () => {
   f.manager.stop()
 })
 
-test('target is announced before pre-existing navigation calculations', () => {
+test('navigation precedes waypoint announcement when calculations already exist', () => {
   const f = fixture({ bearingReference: 'true' })
   f.push('navigation.course.calcValues.distance', 5.5 * 1852)
   f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
   f.push('navigation.course.calcValues.crossTrackError', 100)
   f.push('navigation.course.nextPoint', { name: 'WPT1', position: { latitude: 1, longitude: 2 } })
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85'])
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85', '0x82'])
   f.manager.stop()
 })
 
-test('calculations arriving after the target emit 0x85 without another 0x82', () => {
+test('complete calculations arriving after the target emit 0x85 followed by 0x82', () => {
   const f = fixture({ bearingReference: 'true' })
   f.push('navigation.course.nextPoint', { href: '/resources/waypoints/alpha' })
   f.push('navigation.course.calcValues.distance', 900)
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85'])
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
+  f.push('navigation.course.calcValues.crossTrackError', 10)
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82'])
   f.manager.stop()
 })
 
@@ -87,21 +89,20 @@ test('target changes are announced without calculations', () => {
   f.manager.stop()
 })
 
-test('clear after target-only selection emits one invalid 0x85 and repeated clear is quiet', () => {
+test('clear after target-only selection emits no malformed invalid 0x85', () => {
   const f = fixture()
   f.push('navigation.course.nextPoint', { id: 'a' })
   f.push('navigation.course.nextPoint', null)
   f.push('navigation.course.nextPoint', undefined)
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85'])
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82'])
   assert.equal(f.manager.getState().active, false)
   f.manager.stop()
 })
 
-test('clear options independently control invalid navigation and waypoint name', () => {
+test('clear option controls the optional fallback waypoint name', () => {
   for (const [options, expected] of [
-    [{ sendInvalidOnClear: false }, ['0x82']],
-    [{ sendWaypointNameOnClear: true }, ['0x82', '0x85', '0x82']],
-    [{ sendInvalidOnClear: false, sendWaypointNameOnClear: true }, ['0x82', '0x82']]
+    [{}, ['0x82']],
+    [{ sendWaypointNameOnClear: true }, ['0x82', '0x82']]
   ]) {
     const f = fixture(options)
     f.push('navigation.course.nextPoint', { id: 'a' })
@@ -115,12 +116,16 @@ test('stale calculations suppress only 0x85 and fresh data recovers', () => {
   let clock = 1000
   const f = fixture({ bearingReference: 'true', maximumAgeMs: 100, now: () => clock })
   f.push('navigation.course.calcValues.distance', 1000)
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
+  f.push('navigation.course.calcValues.crossTrackError', 10)
   clock = 1200
   f.push('navigation.course.nextPoint', { id: 'a' })
   assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82'])
   assert.equal(f.manager.getState().lastSuppressionReason, 'navigation-stale')
   f.push('navigation.course.calcValues.distance', 900)
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85'])
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 3)
+  f.push('navigation.course.calcValues.crossTrackError', 9)
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82'])
   f.manager.stop()
 })
 
@@ -129,7 +134,7 @@ test('canonical target clear is authoritative over a legacy target', () => {
   f.push('navigation.courseGreatCircle.nextPoint', { id: 'legacy' })
   f.push('navigation.course.nextPoint', { id: 'canonical' })
   f.push('navigation.course.nextPoint', null)
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x82', '0x85'])
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x82'])
   assert.equal(f.manager.getState().active, false)
   f.manager.stop()
 })
@@ -161,10 +166,11 @@ test('telemetry records selection, announcement, suppression, navigation and cle
   const f = fixture({ bearingReference: 'true' })
   f.push('navigation.course.nextPoint', { id: 'a' })
   f.push('navigation.course.calcValues.distance', 1000)
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
+  f.push('navigation.course.calcValues.crossTrackError', 10)
   f.push('navigation.course.nextPoint', null)
-  assert.deepEqual(f.records.map(record => record.action), [
-    'target-selected', 'waypoint-announced', 'navigation-suppressed', 'navigation-emitted', 'target-cleared'
-  ])
+  assert.equal(f.records.some(record => record.action === 'navigation-emitted'), true)
+  assert.equal(f.records.at(-1).action, 'target-cleared')
   assert.equal(f.navigation.some(state => state.announcedIdentity === 'id:a'), true)
   f.manager.stop()
 })

@@ -38,6 +38,7 @@ test('settings schema exposes every implemented feature without non-functional c
   assert.ok(Array.isArray(schema.propertyOrder))
   assert.ok(schema.propertyOrder.includes('navigationToWaypoint'))
   assert.deepEqual(waypoint.properties.bearingReference.enum, ['magnetic', 'true', 'auto'])
+  assert.deepEqual(waypoint.properties.sendInvalidOnClear.enum, [false])
 
   const units = schema.properties.instrumentUnits.properties
   assert.deepEqual(units.source.enum, ['signalKPreferences', 'configuration'])
@@ -50,6 +51,8 @@ test('settings schema exposes every implemented feature without non-functional c
   const calibration = schema.properties.calibrationAdvisor.properties
   assert.equal(calibration.currentCalibrationFactor.type, 'number')
   assert.equal(calibration.minimumSamples.minimum, 10)
+  assert.equal(calibration.headingEnabled.default, true)
+  assert.equal(calibration.headingMaximumSpreadDegrees.default, 5)
 
   const lights = schema.properties.instrumentLights.properties
   assert.deepEqual(lights.source.enum, ['signalKPath', 'configuration'])
@@ -66,6 +69,7 @@ test('current schema rejects legacy and unknown configuration properties', () =>
   assert.throws(() => factory.validateCurrentConfiguration({ oldOption: true }, plugin.schema), /Unsupported configuration properties/)
   assert.throws(() => factory.validateCurrentConfiguration({ instrumentUnits: { source: 'configuration' } }, plugin.schema), /speedAndDistance is required/)
   assert.doesNotThrow(() => factory.validateCurrentConfiguration({ instrumentUnits: { enabled: true, source: 'configuration', speedAndDistance: 'nautical' } }, plugin.schema))
+  assert.throws(() => factory.validateCurrentConfiguration({ navigationToWaypoint: { sendInvalidOnClear: true } }, plugin.schema), /must be false/)
 })
 
 test('configuration summary exposes all implemented features to the WebApp', () => {

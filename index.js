@@ -189,9 +189,9 @@ function buildSchema(plugin) {
         description: 'Used when Signal K provides no target name. SeaTalk transmits the final four representable characters.'
       },
       sendInvalidOnClear: {
-        type: 'boolean', default: true,
-        title: 'Invalidate navigation when target is cleared',
-        description: 'Send one 0x85 datagram with all validity flags cleared.'
+        type: 'boolean', enum: [false], default: false,
+        title: 'Send invalid navigation on clear (retired)',
+        description: 'Must remain disabled. SeaTalk 0x85 has no safe passive invalid-data mode; older releases could generate instrument data errors.'
       },
       sendWaypointNameOnClear: {
         type: 'boolean', default: false,
@@ -249,8 +249,8 @@ function buildSchema(plugin) {
 
   properties.calibrationAdvisor = {
     type: 'object',
-    title: 'Speed calibration advisor',
-    description: 'Read-only estimates for instrument calibration. The speed suggestion compares speed through water with GPS speed over ground and must be validated in slack water or with reciprocal measured-distance runs.',
+    title: 'Speed and heading calibration advisor',
+    description: 'Read-only estimates for instrument calibration. Speed uses water speed versus GPS speed; heading uses magnetic heading versus variation-corrected GPS course. Validate in slack water and with reciprocal runs.',
     additionalProperties: false,
     default: {},
     properties: {
@@ -261,7 +261,17 @@ function buildSchema(plugin) {
       minimumSpeedMps: { type: 'number', minimum: 0.5, default: 1.5, title: 'Minimum accepted speed', description: 'Samples below this speed are ignored. Value is metres per second (1.5 m/s is about 2.9 kn).' },
       minimumSamples: { type: 'integer', minimum: 10, default: 30, title: 'Minimum samples for a suggestion' },
       windowSize: { type: 'integer', minimum: 20, maximum: 1000, default: 120, title: 'Rolling sample-window size' },
-      maximumRelativeSpread: { type: 'number', minimum: 0.01, maximum: 0.5, default: 0.08, title: 'Maximum relative spread', description: 'Lower values require more stable observations before marking the suggestion ready.' }
+      maximumRelativeSpread: { type: 'number', minimum: 0.01, maximum: 0.5, default: 0.08, title: 'Maximum relative spread', description: 'Lower values require more stable observations before marking the suggestion ready.' },
+      headingEnabled: { type: 'boolean', default: true, title: 'Enable heading calibration suggestion' },
+      headingMeasuredPath: { type: 'string', minLength: 1, default: 'navigation.headingMagnetic', title: 'Measured magnetic heading path' },
+      headingReferencePath: { type: 'string', minLength: 1, default: 'navigation.courseOverGroundTrue', title: 'GPS course reference path' },
+      headingVariationPath: { type: 'string', minLength: 1, default: 'navigation.magneticVariation', title: 'Magnetic variation path' },
+      headingSpeedPath: { type: 'string', minLength: 1, default: 'navigation.speedOverGround', title: 'Heading-advisor speed path' },
+      currentHeadingOffsetDegrees: { type: 'number', minimum: -180, maximum: 180, default: 0, title: 'Current heading alignment offset (degrees)' },
+      headingMinimumSpeedMps: { type: 'number', minimum: 0.5, default: 2, title: 'Minimum speed for heading samples (m/s)' },
+      headingMinimumSamples: { type: 'integer', minimum: 10, default: 30, title: 'Minimum heading samples' },
+      headingWindowSize: { type: 'integer', minimum: 20, maximum: 1000, default: 120, title: 'Heading sample-window size' },
+      headingMaximumSpreadDegrees: { type: 'number', minimum: 0.5, maximum: 45, default: 5, title: 'Maximum heading spread (degrees)' }
     }
   }
 
@@ -344,7 +354,7 @@ function configurationSummary(options, datagrams) {
       updateIntervalMs: options.navigationToWaypoint?.updateIntervalMs ?? 1000,
       maximumAgeMs: options.navigationToWaypoint?.maximumAgeMs ?? 5000,
       bearingReference: options.navigationToWaypoint?.bearingReference ?? 'magnetic',
-      sendInvalidOnClear: options.navigationToWaypoint?.sendInvalidOnClear !== false,
+      sendInvalidOnClear: false,
       sendWaypointNameOnClear: options.navigationToWaypoint?.sendWaypointNameOnClear === true
     },
     instrumentUnits: {
@@ -364,7 +374,17 @@ function configurationSummary(options, datagrams) {
       minimumSpeedMps: options.calibrationAdvisor?.minimumSpeedMps ?? 1.5,
       minimumSamples: options.calibrationAdvisor?.minimumSamples ?? 30,
       windowSize: options.calibrationAdvisor?.windowSize ?? 120,
-      maximumRelativeSpread: options.calibrationAdvisor?.maximumRelativeSpread ?? 0.08
+      maximumRelativeSpread: options.calibrationAdvisor?.maximumRelativeSpread ?? 0.08,
+      headingEnabled: options.calibrationAdvisor?.headingEnabled !== false,
+      headingMeasuredPath: options.calibrationAdvisor?.headingMeasuredPath ?? 'navigation.headingMagnetic',
+      headingReferencePath: options.calibrationAdvisor?.headingReferencePath ?? 'navigation.courseOverGroundTrue',
+      headingVariationPath: options.calibrationAdvisor?.headingVariationPath ?? 'navigation.magneticVariation',
+      headingSpeedPath: options.calibrationAdvisor?.headingSpeedPath ?? 'navigation.speedOverGround',
+      currentHeadingOffsetDegrees: options.calibrationAdvisor?.currentHeadingOffsetDegrees ?? 0,
+      headingMinimumSpeedMps: options.calibrationAdvisor?.headingMinimumSpeedMps ?? 2,
+      headingMinimumSamples: options.calibrationAdvisor?.headingMinimumSamples ?? 30,
+      headingWindowSize: options.calibrationAdvisor?.headingWindowSize ?? 120,
+      headingMaximumSpreadDegrees: options.calibrationAdvisor?.headingMaximumSpreadDegrees ?? 5
     },
     instrumentLights: {
       enabled: options.instrumentLights?.enabled === true,
@@ -395,6 +415,9 @@ function validateCurrentConfiguration(options, schema) {
   }
   if (options.instrumentUnits?.source === 'configuration' && options.instrumentUnits?.speedAndDistance === undefined) {
     throw new Error('instrumentUnits.speedAndDistance is required when source is configuration')
+  }
+  if (options.navigationToWaypoint?.sendInvalidOnClear === true) {
+    throw new Error('navigationToWaypoint.sendInvalidOnClear must be false because partial 0x85 frames cause SeaTalk data errors')
   }
 }
 

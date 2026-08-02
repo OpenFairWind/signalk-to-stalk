@@ -23,9 +23,11 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
   let targetIdentity
   let announcedIdentity
   let resolvedWaypointName
+  let resolvedWaypointQuality = 0
   let announcedName
   let announcedNameQuality = -1
   let active = false
+  let navigationEstablished = false
   let calculationsAvailable = false
   let lastWaypointAt = 0
   let lastNavigationAt = 0
@@ -36,7 +38,6 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     maximumAgeMs: numberOption(options.maximumAgeMs, 5000, 100),
     bearingReference: ['true', 'magnetic', 'auto'].includes(options.bearingReference) ? options.bearingReference : 'magnetic',
     waypointNameFallback: options.waypointNameFallback || 'WP',
-    sendInvalidOnClear: options.sendInvalidOnClear !== false,
     sendWaypointNameOnClear: options.sendWaypointNameOnClear === true
   }
 
@@ -84,11 +85,13 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     active = true
     targetIdentity = identity
     resolvedWaypointName = name
+    resolvedWaypointQuality = resolved.quality
+    if (targetChanged) navigationEstablished = false
     if (targetChanged) telemetry?.record({ type: 'navigation', action: 'target-selected', targetIdentity })
-    if (targetChanged || announcedIdentity !== identity || (announcedName !== name && resolved.quality >= announcedNameQuality)) {
+    const navigationSent = publishNavigation(targetChanged)
+    if (!navigationSent && (targetChanged || announcedIdentity !== identity || (announcedName !== name && resolved.quality >= announcedNameQuality))) {
       announceWaypoint(name, resolved.quality, targetChanged ? 'target-change' : 'waypoint-name-change')
     }
-    publishNavigation(targetChanged)
   }
 
   function announceWaypoint(name, quality, reason) {
@@ -103,12 +106,13 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
 
   function clearTarget() {
     if (!active) return
-    if (config.sendInvalidOnClear) emit('0x85', create85.invalidNavigation(), { reason: 'target-cleared' })
     if (config.sendWaypointNameOnClear) emit('0x82', encode82('', config.waypointNameFallback), { reason: 'target-cleared' })
     active = false
+    navigationEstablished = false
     targetIdentity = undefined
     announcedIdentity = undefined
     resolvedWaypointName = undefined
+    resolvedWaypointQuality = 0
     announcedName = undefined
     announcedNameQuality = -1
     calculationsAvailable = false
@@ -131,6 +135,10 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     lastNavigationAt = emittedAt
     telemetry?.record({ type: 'navigation', action: 'navigation-emitted', targetIdentity })
     updateTelemetry(snapshot.values)
+    if (!navigationEstablished || announcedIdentity !== targetIdentity || announcedName !== resolvedWaypointName) {
+      announceWaypoint(resolvedWaypointName, resolvedWaypointQuality, !navigationEstablished ? 'target-change' : 'waypoint-name-change')
+    }
+    navigationEstablished = true
     return true
   }
 
@@ -166,7 +174,7 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
       bearing = magneticBearing || trueBearing
       bearingTrue = !magneticBearing && Boolean(trueBearing)
     }
-    if (!distance && !xte && !bearing) return undefined
+    if (!distance || !xte || !bearing) return undefined
     const timestamps = [distance, xte, bearing].filter(Boolean).map(entry => entry.timestamp)
     return {
       oldest: Math.min(...timestamps),

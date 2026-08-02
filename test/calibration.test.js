@@ -31,3 +31,14 @@ test('speed advisor calculates multiplier and suggested ST60 factor', () => {
   assert.ok(Math.abs(calibration.multiplier - 1.1) < 1e-9)
   assert.ok(Math.abs(calibration.suggestedCalibrationFactor - 1.045) < 1e-9)
 })
+
+test('heading advisor calculates a circular alignment suggestion across north', () => {
+  const create = load()
+  let headingCalibration
+  const telemetry = { record(){}, setCalibration(){}, setHeadingCalibration(value){ headingCalibration = value } }
+  const manager = create({}, { currentHeadingOffsetDegrees: 2, headingMinimumSamples: 10, headingWindowSize: 20 }, telemetry)
+  for (let i = 0; i < 10; i++) manager.addHeadingSample({ measured: 358 * Math.PI / 180, reference: 3 * Math.PI / 180, magneticVariation: 0, sog: 4 })
+  assert.equal(headingCalibration.stable, true)
+  assert.ok(Math.abs(headingCalibration.correctionDegrees - 5) < 1e-9)
+  assert.ok(Math.abs(headingCalibration.suggestedHeadingOffsetDegrees - 7) < 1e-9)
+})

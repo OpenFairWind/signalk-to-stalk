@@ -1,32 +1,32 @@
 'use strict'
-const { assertFinite, normalizeDegrees, radiansToDegrees, toDatagram } = require('../stalk')
+const { normalizeDegrees, radiansToDegrees, toDatagram } = require('../stalk')
 
 const METRES_PER_NAUTICAL_MILE = 1852
 
 function encodeNavigation({ crossTrackError, bearing, distance, bearingTrue = false } = {}) {
+  if (![crossTrackError, bearing, distance].every(Number.isFinite)) {
+    throw new TypeError('crossTrackError, bearing, and distance are required for a valid 0x85 datagram')
+  }
   let xte = 0
   let xteLow = 0
   let bearingVU = 0
   let rangeZW = 0
   let rangeLow = 0
   let y = 0
-  let flags = 0
+  // Mode 5 displays XTE, range, and bearing without requesting autopilot track control.
+  const trackControlMode = 0x05
 
-  if (crossTrackError != null) {
-    assertFinite(crossTrackError, 'crossTrackError')
+  {
     const xteHundredthsNm = Math.round(Math.abs(crossTrackError) / METRES_PER_NAUTICAL_MILE * 100)
     if (xteHundredthsNm > 0x0fff) throw new RangeError('crossTrackError exceeds the SeaTalk field capacity')
     xte = (xteHundredthsNm >> 8) & 0x0f
     xteLow = xteHundredthsNm & 0xff
     if (crossTrackError < 0) y |= 0x04
-    flags |= 0x01
-    if (xteHundredthsNm >= 30) flags |= 0x08
   }
 
   let rangeHigh = 0
   let bearingW = 0
-  if (bearing != null) {
-    assertFinite(bearing, 'bearing')
+  {
     const halfDegrees = Math.round(normalizeDegrees(radiansToDegrees(bearing)) * 2) % 720
     const quadrant = Math.floor(halfDegrees / 180)
     const withinQuadrant = halfDegrees % 180
@@ -34,11 +34,9 @@ function encodeNavigation({ crossTrackError, bearing, distance, bearingTrue = fa
     const v = withinQuadrant & 0x0f
     bearingW = (withinQuadrant >> 4) & 0x0f
     bearingVU = (v << 4) | u
-    flags |= 0x02
   }
 
-  if (distance != null) {
-    assertFinite(distance, 'distance')
+  {
     if (distance < 0) throw new RangeError('distance must not be negative')
     const nauticalMiles = distance / METRES_PER_NAUTICAL_MILE
     let encoded
@@ -51,11 +49,11 @@ function encodeNavigation({ crossTrackError, bearing, distance, bearingTrue = fa
     if (encoded > 0x0fff) throw new RangeError('distance exceeds the SeaTalk field capacity')
     rangeHigh = (encoded >> 8) & 0x0f
     rangeLow = encoded & 0xff
-    flags |= 0x04
   }
 
   rangeZW = (rangeHigh << 4) | bearingW
-  return [0x85, (xte << 4) | 0x06, xteLow, bearingVU, rangeZW, rangeLow, (y << 4) | flags, 0x00, 0x00]
+  const yf = (y << 4) | trackControlMode
+  return [0x85, (xte << 4) | 0x06, xteLow, bearingVU, rangeZW, rangeLow, yf, 0x00, 0xff - yf]
 }
 
 module.exports = () => ({
@@ -66,4 +64,3 @@ module.exports = () => ({
 })
 
 module.exports.encodeNavigation = encodeNavigation
-module.exports.invalidNavigation = () => toDatagram(encodeNavigation({}))

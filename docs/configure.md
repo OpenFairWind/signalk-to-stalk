@@ -127,6 +127,10 @@ The advisor rejects very low-speed observations, obvious ratio outliers, and mar
 
 GPS speed over ground is not normally equal to speed through water when current or tide is present. Use the advisor only in appropriate conditions, such as slack water, or validate with reciprocal measured-distance runs.
 
+The heading advisor compares `navigation.headingMagnetic` with `navigation.courseOverGroundTrue` corrected by `navigation.magneticVariation`. It uses circular statistics so observations around 359°/0° remain coherent, and suggests a signed alignment offset to add to the currently configured instrument offset. Samples below the configured GPS speed are rejected. Validate the result on multiple steady reciprocal headings because current, leeway, sideslip, and local compass deviation can make course over ground differ from heading.
+
 ## Removed Legacy Configuration
 
 Current releases reject unknown root properties and obsolete managed-feature fields at startup. This is intentional: invalid saved configuration should be fixed explicitly rather than silently ignored.
+
+`navigationToWaypoint.sendInvalidOnClear` is retained only as an explicit migration field and must be `false`. Earlier releases defaulted it on, but the resulting partial `0x85` frame is not a valid passive clear operation and can make SeaTalk instruments report data errors.

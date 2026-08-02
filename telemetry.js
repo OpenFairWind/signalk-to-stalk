@@ -14,6 +14,7 @@ module.exports = function createTelemetry(options = {}) {
   let units = {}
   let lights = {}
   let calibration = {}
+  let headingCalibration = {}
   let configuration = {}
 
   function record(event) {
@@ -51,6 +52,7 @@ module.exports = function createTelemetry(options = {}) {
       units: { ...units },
       lights: { ...lights },
       calibration: { ...calibration },
+      headingCalibration: { ...headingCalibration },
       configuration: structuredCloneSafe(configuration),
       recentCount: events.length,
       capacity
@@ -83,6 +85,7 @@ module.exports = function createTelemetry(options = {}) {
     setUnits(value) { units = value || {} },
     setLights(value) { lights = value || {} },
     setCalibration(value) { calibration = value || {} },
+    setHeadingCalibration(value) { headingCalibration = value || {} },
     setConfiguration(value) { configuration = structuredCloneSafe(value || {}) },
     stop() {
       running = false

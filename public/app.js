@@ -29,6 +29,7 @@ function render(snapshot) {
   const units = snapshot.units || {}
   const lights = snapshot.lights || {}
   const calibration = snapshot.calibration || {}
+  const headingCalibration = snapshot.headingCalibration || {}
 
   setPill('state', snapshot.running ? 'Plugin running' : 'Plugin stopped', snapshot.running ? 'ok' : 'bad')
   $('emitted').textContent = snapshot.totals?.emitted || 0
@@ -74,6 +75,13 @@ function render(snapshot) {
   $('calstability').textContent = finite(calibration.relativeSpread) ? `${fmt(calibration.relativeSpread * 100, 1)}% / ${fmt((calConfig.maximumRelativeSpread || 0) * 100, 1)}%` : '—'
   $('calminspeed').textContent = calConfig.enabled ? `${fmt(calConfig.minimumSpeedMps, 2)} m/s · ${fmt(calConfig.minimumSpeedMps * 1.943844, 2)} kn` : '—'
   $('caladvisory').textContent = calibration.advisory || 'Enable the advisor to collect observations.'
+  $('headingpaths').textContent = calConfig.enabled && calConfig.headingEnabled !== false ? `${calConfig.headingMeasuredPath} / ${calConfig.headingReferencePath}` : '—'
+  $('headingcurrent').textContent = finite(headingCalibration.currentHeadingOffsetDegrees) ? `${fmt(headingCalibration.currentHeadingOffsetDegrees, 1)}°` : '—'
+  $('headingcorrection').textContent = finite(headingCalibration.correctionDegrees) ? `${fmt(headingCalibration.correctionDegrees, 1)}°` : '—'
+  $('headingsuggested').textContent = finite(headingCalibration.suggestedHeadingOffsetDegrees) ? `${fmt(headingCalibration.suggestedHeadingOffsetDegrees, 1)}°` : '—'
+  $('headingsamples').textContent = calConfig.enabled && calConfig.headingEnabled !== false ? `${headingCalibration.sampleCount || 0} of ${headingCalibration.minimumSamples || calConfig.headingMinimumSamples || 0} required` : '—'
+  $('headingstability').textContent = finite(headingCalibration.spreadDegrees) ? `${fmt(headingCalibration.spreadDegrees, 1)}° / ${fmt(headingCalibration.maximumSpreadDegrees, 1)}°` : '—'
+  $('headingadvisory').textContent = headingCalibration.advisory || 'Enable the advisor to collect observations.'
 
   renderFeatures(config)
   renderIndicators(config, snapshot.perDatagram || {}, snapshot.lastDatagrams || {})
@@ -91,7 +99,7 @@ function renderFeatures(config) {
     feature('0x82 / 0x85', 'Waypoint guidance', config.navigationToWaypoint?.enabled, config.navigationToWaypoint?.enabled ? `${title(config.navigationToWaypoint.bearingReference)} bearing · ${durationMs(config.navigationToWaypoint.updateIntervalMs)} refresh · ${durationMs(config.navigationToWaypoint.maximumAgeMs)} max age` : 'Passive target guidance'),
     feature('0x24', 'Display units', config.instrumentUnits?.enabled, config.instrumentUnits?.enabled ? (config.instrumentUnits.source === 'configuration' ? `Fixed ${title(config.instrumentUnits.speedAndDistance)} · startup ${enabledLabel(config.instrumentUnits.sendOnStartup)}` : `Signal K preferences · poll ${durationMs(config.instrumentUnits.pollIntervalMs)} · refresh ${durationSeconds(config.instrumentUnits.periodicRefreshSeconds)}`) : 'Network-wide speed and distance units'),
     feature('0x30', 'Display lighting', config.instrumentLights?.enabled, config.instrumentLights?.enabled ? (config.instrumentLights.source === 'configuration' ? `Fixed L${config.instrumentLights.configuredLevel} · startup ${enabledLabel(config.instrumentLights.sendOnStartup)}` : `${config.instrumentLights.signalKPath} · ${title(config.instrumentLights.valueFormat)} · min ${durationMs(config.instrumentLights.minimumIntervalMs)}`) : 'Network-wide L0–L3 illumination'),
-    feature('CAL', 'Speed calibration advisor', config.calibrationAdvisor?.enabled, config.calibrationAdvisor?.enabled ? `${config.calibrationAdvisor.measuredPath} vs ${config.calibrationAdvisor.referencePath} · ${config.calibrationAdvisor.minimumSamples} samples` : 'Read-only ST60 speed-factor suggestion')
+    feature('CAL', 'Speed and heading calibration advisor', config.calibrationAdvisor?.enabled, config.calibrationAdvisor?.enabled ? `${config.calibrationAdvisor.minimumSamples} speed / ${config.calibrationAdvisor.headingMinimumSamples} heading samples` : 'Read-only ST60 calibration suggestions')
   ]
   const all = direct.map(item => feature(item.datagram, item.title, item.enabled, `${durationMs(item.minimumIntervalMs || 0)} minimum interval`)).concat(managed)
   $('features').innerHTML = all.map(item => `<article class="feature ${item.enabled ? 'enabled' : 'disabled'}"><div class="feature-head"><div class="feature-title"><strong>${escapeHtml(item.command)}</strong><span>${escapeHtml(item.name)}</span></div><b class="feature-state">${enabledLabel(item.enabled)}</b></div><small>${escapeHtml(item.detail || '')}</small></article>`).join('')

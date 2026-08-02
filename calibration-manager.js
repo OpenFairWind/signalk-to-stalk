@@ -12,8 +12,9 @@ module.exports = function createCalibrationManager(app, options = {}, telemetry)
     maximumRelativeSpread: 0.08,
     ...options
   }
-  let unsubscribe
+  const unsubscribes = []
   const samples = []
+  const headingSamples = []
 
   function start() {
     const measured = app.streambundle.getSelfStream(config.measuredPath)
@@ -22,8 +23,60 @@ module.exports = function createCalibrationManager(app, options = {}, telemetry)
       .filter(({ stw, sog }) => Number.isFinite(stw) && Number.isFinite(sog))
       .changes()
       .debounceImmediate(200)
-    unsubscribe = stream.onValue(addSample)
+    unsubscribes.push(stream.onValue(addSample))
+    if (config.headingEnabled !== false) {
+      const heading = app.streambundle.getSelfStream(config.headingMeasuredPath || 'navigation.headingMagnetic')
+      const course = app.streambundle.getSelfStream(config.headingReferencePath || 'navigation.courseOverGroundTrue')
+      const variation = app.streambundle.getSelfStream(config.headingVariationPath || 'navigation.magneticVariation')
+      const speed = app.streambundle.getSelfStream(config.headingSpeedPath || 'navigation.speedOverGround')
+      const headingStream = Bacon.combineWith((measured, reference, magneticVariation, sog) => ({ measured, reference, magneticVariation, sog }), [heading, course, variation, speed])
+        .filter(({ measured, reference, magneticVariation, sog }) => [measured, reference, magneticVariation, sog].every(Number.isFinite))
+        .changes()
+        .debounceImmediate(200)
+      unsubscribes.push(headingStream.onValue(addHeadingSample))
+    }
     update('waiting')
+    updateHeading('waiting')
+  }
+
+  function addHeadingSample({ measured, reference, magneticVariation = 0, sog }) {
+    const minimumSpeed = config.headingMinimumSpeedMps ?? config.minimumSpeedMps
+    if (sog < minimumSpeed) {
+      telemetry.record({ type: 'suppressed', reason: 'heading-calibration-below-minimum-speed', values: { measured, reference, sog } })
+      return updateHeading('waiting')
+    }
+    const referenceMagnetic = reference - magneticVariation
+    const offset = normalizeRadians(referenceMagnetic - measured)
+    headingSamples.push({ time: Date.now(), measured, reference: referenceMagnetic, sog, offset })
+    const windowSize = config.headingWindowSize ?? config.windowSize
+    if (headingSamples.length > windowSize) headingSamples.splice(0, headingSamples.length - windowSize)
+    updateHeading('sampling')
+  }
+
+  function updateHeading(state) {
+    const offsets = headingSamples.map(item => item.offset)
+    const offset = circularMean(offsets)
+    const deviations = offsets.map(value => Math.abs(normalizeRadians(value - offset))).sort((a, b) => a - b)
+    const spread = median(deviations)
+    const minimumSamples = config.headingMinimumSamples ?? config.minimumSamples
+    const maximumSpread = (config.headingMaximumSpreadDegrees ?? 5) * Math.PI / 180
+    const stable = headingSamples.length >= minimumSamples && Number.isFinite(spread) && spread <= maximumSpread
+    const currentOffset = (config.currentHeadingOffsetDegrees ?? 0) * Math.PI / 180
+    telemetry.setHeadingCalibration({
+      enabled: config.headingEnabled !== false,
+      state: stable ? 'suggestion-ready' : state,
+      measuredPath: config.headingMeasuredPath || 'navigation.headingMagnetic',
+      referencePath: config.headingReferencePath || 'navigation.courseOverGroundTrue',
+      sampleCount: headingSamples.length,
+      minimumSamples,
+      currentHeadingOffsetDegrees: config.currentHeadingOffsetDegrees ?? 0,
+      correctionDegrees: Number.isFinite(offset) ? offset * 180 / Math.PI : undefined,
+      suggestedHeadingOffsetDegrees: Number.isFinite(offset) ? normalizeDegrees((currentOffset + offset) * 180 / Math.PI) : undefined,
+      spreadDegrees: Number.isFinite(spread) ? spread * 180 / Math.PI : undefined,
+      maximumSpreadDegrees: config.headingMaximumSpreadDegrees ?? 5,
+      stable,
+      advisory: 'Validate on several steady reciprocal headings; current, leeway, and compass deviation can bias GPS-course comparisons.'
+    })
   }
 
   function addSample({ stw, sog }) {
@@ -69,11 +122,17 @@ module.exports = function createCalibrationManager(app, options = {}, telemetry)
   }
 
   function stop() {
-    if (unsubscribe) unsubscribe()
-    unsubscribe = undefined
+    unsubscribes.splice(0).forEach(unsubscribe => unsubscribe())
   }
 
-  return { start, stop, addSample, snapshot: () => samples.slice() }
+  return { start, stop, addSample, addHeadingSample, snapshot: () => samples.slice(), headingSnapshot: () => headingSamples.slice() }
+}
+
+function normalizeRadians(value) { return ((value + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI }
+function normalizeDegrees(value) { return ((value + 180) % 360 + 360) % 360 - 180 }
+function circularMean(values) {
+  if (!values.length) return undefined
+  return Math.atan2(values.reduce((sum, value) => sum + Math.sin(value), 0), values.reduce((sum, value) => sum + Math.cos(value), 0))
 }
 
 function median(values) {
@@ -82,3 +141,4 @@ function median(values) {
   return values.length % 2 ? values[middle] : (values[middle - 1] + values[middle]) / 2
 }
 module.exports.median = median
+module.exports.circularMean = circularMean

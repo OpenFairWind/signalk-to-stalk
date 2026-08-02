@@ -35,7 +35,7 @@ Stateful features live in manager modules:
 - `waypoint-manager.js` tracks active targets, waypoint names, stale navigation values, periodic refresh, and clear behavior.
 - `units-manager.js` resolves Signal K display preferences or fixed settings and emits coherent `0x24` unit updates.
 - `lights-manager.js` maps Signal K or configured brightness values to SeaTalk `0x30` lamp levels.
-- `calibration-manager.js` maintains rolling speed samples and publishes read-only calibration advice through telemetry.
+- `calibration-manager.js` maintains independent rolling speed and circular heading samples and publishes read-only calibration advice through telemetry.
 
 Managers receive the Signal K `app`, an `emitDatagram` callback when they transmit, feature options, and telemetry.
 
@@ -51,7 +51,7 @@ navigation.course.calcValues.*
   -> periodic or change-driven 0x85 guidance
 ```
 
-The waypoint manager owns the active identity, resolved and announced names, calculation availability, suppression reason, and last emission times. A target change resets announcement ownership and sends `0x82` before attempting `0x85`. A better name for the same stable identity produces one replacement announcement; repeated equivalent updates do not.
+The waypoint manager owns the active identity, resolved and announced names, calculation availability, suppression reason, and last emission times. It emits only complete `0x85` guidance frames and, on a target change, sends `0x85` before `0x82` as required by SeaTalk. A better name for the same stable identity produces one replacement announcement; repeated equivalent updates do not. Target clearing does not fabricate an invalid partial navigation frame.
 
 Canonical `navigation.course.nextPoint` state is authoritative once that path has emitted. In particular, a canonical null clears the target even if a legacy path retains an older value. Before the canonical path has emitted, the first usable legacy great-circle or rhumb-line value is accepted. This avoids combining a current canonical target with stale legacy state.
 
