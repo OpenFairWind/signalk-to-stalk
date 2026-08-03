@@ -4,7 +4,7 @@
 
 The plugin is designed for installations that need to feed SeaTalk1-compatible equipment through a Signal K output path such as a STALK-capable NMEA 0183 provider, SeaTalk bridge, or adapter.
 
-Version 2.0.6 is the stable release target for the current datagram-manager architecture and read-only monitor.
+Version 2.0.7 is the stable release target for the current datagram-manager architecture and read-only monitor.
 
 ## What It Does
 

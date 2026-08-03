@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 2.0.7 - 2026-08-03
+
+### Fixed
+
+- Keep the active waypoint announcement alive by periodically refreshing command `0x82`.
+- Refresh established passive navigation as a coherent `0x85` followed by `0x82`, preserving waypoint, bearing, cross-track error, distance, and highway pages on SeaTalk instruments.
+- Retain the last complete navigation calculation while its target remains active so Signal K streams that suppress unchanged values do not cause SeaTalk displays to time out.
+- Stop retained guidance immediately when Signal K clears or replaces the destination.
+
 ## 2.0.6 - 2026-08-03
 
 ### Fixed

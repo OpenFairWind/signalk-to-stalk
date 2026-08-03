@@ -1,13 +1,13 @@
 # signalk-to-stalk
 
-Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.6 is the stable feature release for the current architecture.
+Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.7 is the stable release for the current architecture.
 
 The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTalk Technical Reference.
 
 ## Features
 
 - Direct datagram conversions for position, speed over ground, course over ground, UTC time, and UTC date.
-- Passive target waypoint guidance that emits complete mode-5 `0x85` data before the `0x82` target announcement when fresh calculations are available.
+- Passive target waypoint guidance that refreshes complete mode-5 `0x85` data before the `0x82` target announcement while a destination remains active.
 - SeaTalk display-unit synchronization using command `0x24`.
 - SeaTalk display-light synchronization using command `0x30`.
 - Read-only WebApp monitor with runtime status, counters, recent activity, and speed and heading calibration advice.
