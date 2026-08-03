@@ -59,7 +59,7 @@ Navigation frames are rate-limited to the configured refresh interval. Invalid o
 
 ### Stale Data
 
-`maximumAgeMs` suppresses `0x85` output when the calculated navigation values used in the current datagram have not been refreshed recently. Fresh calculation updates resume `0x85` output without re-announcing an unchanged target.
+`maximumAgeMs` suppresses the first `0x85` for a target when the available calculation values are already stale. Once a complete calculation has established guidance for the active target, its last coherent values are refreshed as an `0x85` / `0x82` pair until Signal K clears or replaces that target. This accommodates Signal K streams that do not emit unchanged values and prevents SeaTalk instruments from timing out waypoint, bearing, XTE, and highway pages.
 
 ## Display Units
 

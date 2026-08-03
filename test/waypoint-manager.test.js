@@ -24,6 +24,51 @@ function fixture(options = {}, overrides = {}) {
   return { streams, emitted, navigation, records, manager, push(path, value) { streams.get(path).push(value) } }
 }
 
+test('refreshes a coherent navigation and waypoint pair after unchanged calculations age', () => {
+  let clock = 1000
+  let refresh
+  const originalSetInterval = global.setInterval
+  const originalClearInterval = global.clearInterval
+  global.setInterval = callback => { refresh = callback; return { unref() {} } }
+  global.clearInterval = () => {}
+  try {
+    const f = fixture({ bearingReference: 'true', updateIntervalMs: 1000, maximumAgeMs: 100, now: () => clock })
+    f.push('navigation.course.calcValues.distance', 1000)
+    f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
+    f.push('navigation.course.calcValues.crossTrackError', 10)
+    f.push('navigation.course.nextPoint', { id: 'a', name: 'WPT1' })
+    assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85', '0x82'])
+    clock = 3000
+    refresh()
+    assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85', '0x82', '0x85', '0x82'])
+    assert.equal(f.manager.getState().calculationsAvailable, true)
+    f.manager.stop()
+  } finally {
+    global.setInterval = originalSetInterval
+    global.clearInterval = originalClearInterval
+  }
+})
+
+test('refreshes the waypoint announcement while calculations are unavailable', () => {
+  let clock = 1000
+  let refresh
+  const originalSetInterval = global.setInterval
+  const originalClearInterval = global.clearInterval
+  global.setInterval = callback => { refresh = callback; return { unref() {} } }
+  global.clearInterval = () => {}
+  try {
+    const f = fixture({ updateIntervalMs: 1000, now: () => clock })
+    f.push('navigation.course.nextPoint', { id: 'a', name: 'WPT1' })
+    clock = 2000
+    refresh()
+    assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x82'])
+    f.manager.stop()
+  } finally {
+    global.setInterval = originalSetInterval
+    global.clearInterval = originalClearInterval
+  }
+})
+
 test('target-only selection immediately announces 0x82', () => {
   const f = fixture()
   f.push('navigation.course.nextPoint', { name: 'WPT1', position: { latitude: 1, longitude: 2 } })
@@ -68,7 +113,7 @@ test('rate limits calculation update bursts on the SeaTalk bus', () => {
   assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82'])
   clock = 2000
   f.push('navigation.course.calcValues.crossTrackError', 8)
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82', '0x85'])
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82', '0x85', '0x82'])
   f.manager.stop()
 })
 

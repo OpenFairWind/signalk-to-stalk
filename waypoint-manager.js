@@ -48,7 +48,7 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
         unsubscribes.push(stream.onValue(value => update(field, path, priority, value)))
       })
     }
-    timer = setInterval(() => publishNavigation(false), config.updateIntervalMs)
+    timer = setInterval(refreshGuidance, config.updateIntervalMs)
     if (typeof timer.unref === 'function') timer.unref()
   }
 
@@ -128,7 +128,7 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     const snapshot = navigationSnapshot()
     if (!snapshot) return suppressNavigation('navigation-unavailable')
     const emittedAt = now()
-    if (emittedAt - snapshot.oldest > config.maximumAgeMs) return suppressNavigation('navigation-stale', { ageMs: emittedAt - snapshot.oldest })
+    if (!navigationEstablished && emittedAt - snapshot.oldest > config.maximumAgeMs) return suppressNavigation('navigation-stale', { ageMs: emittedAt - snapshot.oldest })
     if (!targetChanged && lastNavigationAt && emittedAt - lastNavigationAt < config.updateIntervalMs) return false
     const invalidReason = validateNavigation(snapshot.values)
     if (invalidReason) return suppressNavigation(invalidReason)
@@ -138,11 +138,17 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     lastNavigationAt = emittedAt
     telemetry?.record({ type: 'navigation', action: 'navigation-emitted', targetIdentity })
     updateTelemetry(snapshot.values)
-    if (!navigationEstablished || announcedIdentity !== targetIdentity || announcedName !== resolvedWaypointName) {
-      announceWaypoint(resolvedWaypointName, resolvedWaypointQuality, !navigationEstablished ? 'target-change' : 'waypoint-name-change')
-    }
+    announceWaypoint(resolvedWaypointName, resolvedWaypointQuality,
+      !navigationEstablished ? 'target-change' : announcedName !== resolvedWaypointName ? 'waypoint-name-change' : 'guidance-refresh')
     navigationEstablished = true
     return true
+  }
+
+  function refreshGuidance() {
+    if (!active) return
+    if (!publishNavigation(false) && now() - lastWaypointAt >= config.updateIntervalMs) {
+      announceWaypoint(resolvedWaypointName, resolvedWaypointQuality, 'guidance-refresh')
+    }
   }
 
   function suppressNavigation(reason, details = {}) {
