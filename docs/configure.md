@@ -37,13 +37,13 @@ Example:
 
 When a target is selected or advanced, the plugin emits:
 
-1. `0x82` immediately with the target identifier.
-2. `0x85` with bearing, range, cross-track error, and validity flags when at least one supported calculated value is available and fresh.
+1. `0x85` with bearing, range, and cross-track error when a complete fresh calculation is already available.
+2. `0x82` with the target identifier. If the calculation is not yet complete, `0x82` is sent immediately and the complete `0x85` follows when the values arrive.
 
 Subsequent calculation changes refresh `0x85` without repeatedly announcing `0x82`.
 A Course API calculation provider such as `@signalk/course-provider` may be needed to produce bearing, range, or cross-track error, but it is not required to announce the target waypoint. Stale or missing calculations suppress only `0x85`; they never delay a new `0x82` announcement.
 
-When the target is cleared, the default behavior is to emit one `0x85` with all validity flags cleared and stop periodic navigation output. Sending a fallback `0x82` during clear is optional and disabled by default.
+When the target is cleared, periodic navigation output stops. No invalid `0x85` is emitted because older instruments can interpret a partial or invalid frame as an error. Sending a fallback `0x82` during clear is optional and disabled by default.
 
 ### Bearing Reference
 
@@ -53,7 +53,9 @@ When the target is cleared, the default behavior is to emit one `0x85` with all 
 - `true`: use true bearing;
 - `auto`: prefer magnetic and fall back to true.
 
-In magnetic mode, if only true bearing and magnetic variation are available, the magnetic bearing is derived.
+In magnetic mode, if only true bearing and magnetic variation are available, the magnetic bearing is derived. If variation is unavailable, the true bearing is transmitted with the SeaTalk true-bearing flag instead of suppressing all waypoint guidance.
+
+Navigation frames are rate-limited to the configured refresh interval. Invalid or out-of-range distance and cross-track values are suppressed so they cannot be interpreted as alarm-like data by connected instruments.
 
 ### Stale Data
 

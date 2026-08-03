@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 2.0.6 - 2026-08-03
+
+### Fixed
+
+- Fall back to a correctly flagged true waypoint bearing when magnetic variation is unavailable, restoring waypoint, bearing, XTE, and highway data on affected installations.
+- Rate-limit `0x85` calculation updates and suppress out-of-range guidance to avoid SeaTalk bus bursts and alarm-like corrupted instrument indications.
+
 ## 2.0.5 - 2026-08-02
 
 ### Fixed

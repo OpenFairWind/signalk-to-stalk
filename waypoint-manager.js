@@ -129,6 +129,9 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     if (!snapshot) return suppressNavigation('navigation-unavailable')
     const emittedAt = now()
     if (emittedAt - snapshot.oldest > config.maximumAgeMs) return suppressNavigation('navigation-stale', { ageMs: emittedAt - snapshot.oldest })
+    if (!targetChanged && lastNavigationAt && emittedAt - lastNavigationAt < config.updateIntervalMs) return false
+    const invalidReason = validateNavigation(snapshot.values)
+    if (invalidReason) return suppressNavigation(invalidReason)
     calculationsAvailable = true
     lastSuppressionReason = undefined
     emit('0x85', encode85(snapshot.values), { reason: targetChanged ? 'target-change' : 'navigation-refresh', values: snapshot.values, targetIdentity })
@@ -169,7 +172,10 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
       bearing = trueBearing
       bearingTrue = true
     } else if (config.bearingReference === 'magnetic') {
-      bearing = magneticBearing || (trueBearing && variation ? { value: trueBearing.value - variation.value, timestamp: Math.max(trueBearing.timestamp, variation.timestamp) } : undefined)
+      bearing = magneticBearing || (trueBearing && variation
+        ? { value: trueBearing.value - variation.value, timestamp: Math.max(trueBearing.timestamp, variation.timestamp) }
+        : trueBearing)
+      bearingTrue = !magneticBearing && !variation && Boolean(trueBearing)
     } else {
       bearing = magneticBearing || trueBearing
       bearingTrue = !magneticBearing && Boolean(trueBearing)
@@ -188,6 +194,13 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
   }
 
   return { start, stop, getState: () => ({ active, targetIdentity, resolvedWaypointName, announcedIdentity, announcedName, calculationsAvailable, lastWaypointAt, lastNavigationAt, lastSuppressionReason }) }
+}
+
+function validateNavigation({ distance, crossTrackError, bearing }) {
+  if (![distance, crossTrackError, bearing].every(Number.isFinite)) return 'navigation-invalid'
+  if (distance < 0 || distance / 1852 * 10 > 0x0fff) return 'distance-out-of-range'
+  if (Math.abs(crossTrackError) / 1852 * 100 > 0x0fff) return 'cross-track-error-out-of-range'
+  return undefined
 }
 
 function targetIdentityOf(target) {

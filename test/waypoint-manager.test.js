@@ -44,6 +44,45 @@ test('navigation precedes waypoint announcement when calculations already exist'
   f.manager.stop()
 })
 
+test('magnetic mode falls back to a flagged true bearing when variation is unavailable', () => {
+  const f = fixture({ bearingReference: 'magnetic' })
+  f.push('navigation.course.calcValues.distance', 1000)
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
+  f.push('navigation.course.calcValues.crossTrackError', 10)
+  f.push('navigation.course.nextPoint', { id: 'a', name: 'WPT1' })
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85', '0x82'])
+  assert.equal(f.emitted[0].metadata.values.bearingTrue, true)
+  f.manager.stop()
+})
+
+test('rate limits calculation update bursts on the SeaTalk bus', () => {
+  let clock = 1000
+  const f = fixture({ bearingReference: 'true', updateIntervalMs: 1000, now: () => clock })
+  f.push('navigation.course.nextPoint', { id: 'a' })
+  f.push('navigation.course.calcValues.distance', 1000)
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
+  f.push('navigation.course.calcValues.crossTrackError', 10)
+  f.push('navigation.course.calcValues.distance', 999)
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 3)
+  f.push('navigation.course.calcValues.crossTrackError', 9)
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82'])
+  clock = 2000
+  f.push('navigation.course.calcValues.crossTrackError', 8)
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82', '0x85'])
+  f.manager.stop()
+})
+
+test('suppresses out-of-range guidance instead of passing an alarm-like frame to SeaTalk', () => {
+  const f = fixture({ bearingReference: 'true' })
+  f.push('navigation.course.calcValues.distance', 1000)
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
+  f.push('navigation.course.calcValues.crossTrackError', 100000)
+  f.push('navigation.course.nextPoint', { id: 'a' })
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82'])
+  assert.equal(f.manager.getState().lastSuppressionReason, 'cross-track-error-out-of-range')
+  f.manager.stop()
+})
+
 test('complete calculations arriving after the target emit 0x85 followed by 0x82', () => {
   const f = fixture({ bearingReference: 'true' })
   f.push('navigation.course.nextPoint', { href: '/resources/waypoints/alpha' })
