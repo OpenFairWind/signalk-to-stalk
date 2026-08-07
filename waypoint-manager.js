@@ -82,11 +82,17 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     const resolved = resolveWaypoint(target, current('activeRoute')?.value, app, config.waypointNameFallback)
     const name = resolved.name
     const targetChanged = !active || identity !== targetIdentity
+    const replacedTarget = active && identity !== targetIdentity
+    if (replacedTarget) clearNavigationCalculations()
     active = true
     targetIdentity = identity
     resolvedWaypointName = name
     resolvedWaypointQuality = resolved.quality
-    if (targetChanged) navigationEstablished = false
+    if (targetChanged) {
+      navigationEstablished = false
+      calculationsAvailable = false
+      lastNavigationAt = 0
+    }
     if (targetChanged) telemetry?.record({ type: 'navigation', action: 'target-selected', targetIdentity })
     const navigationSent = publishNavigation(targetChanged)
     if (!navigationSent && (targetChanged || announcedIdentity !== identity || (announcedName !== name && resolved.quality >= announcedNameQuality))) {
@@ -116,6 +122,7 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     announcedName = undefined
     announcedNameQuality = -1
     calculationsAvailable = false
+    clearNavigationCalculations()
     lastWaypointAt = 0
     lastNavigationAt = 0
     lastSuppressionReason = undefined
@@ -138,17 +145,21 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     lastNavigationAt = emittedAt
     telemetry?.record({ type: 'navigation', action: 'navigation-emitted', targetIdentity })
     updateTelemetry(snapshot.values)
-    announceWaypoint(resolvedWaypointName, resolvedWaypointQuality,
-      !navigationEstablished ? 'target-change' : announcedName !== resolvedWaypointName ? 'waypoint-name-change' : 'guidance-refresh')
+    if (announcedIdentity !== targetIdentity || announcedName !== resolvedWaypointName) {
+      announceWaypoint(resolvedWaypointName, resolvedWaypointQuality,
+        !navigationEstablished ? 'target-change' : 'waypoint-name-change')
+    }
     navigationEstablished = true
     return true
   }
 
   function refreshGuidance() {
     if (!active) return
-    if (!publishNavigation(false) && now() - lastWaypointAt >= config.updateIntervalMs) {
-      announceWaypoint(resolvedWaypointName, resolvedWaypointQuality, 'guidance-refresh')
-    }
+    publishNavigation(false)
+  }
+
+  function clearNavigationCalculations() {
+    for (const field of ['distance', 'bearingTrue', 'bearingMagnetic', 'crossTrackError']) state[field].clear()
   }
 
   function suppressNavigation(reason, details = {}) {

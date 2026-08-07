@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 2.0.8 - 2026-08-07
+
+### Fixed
+
+- Stop retransmitting waypoint-change command `0x82` during periodic guidance refreshes, avoiding repeated audible waypoint behavior and unnecessary SeaTalk bus traffic.
+- Discard cached navigation calculations when a destination is cleared or replaced so bearing, XTE, and distance from an old waypoint cannot be emitted for a new one.
+- Continue refreshing the complete passive mode-5 `0x85` frame for bearing, XTE, distance, and highway displays.
+
 ## 2.0.7 - 2026-08-03
 
 ### Fixed
