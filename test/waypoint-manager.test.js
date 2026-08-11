@@ -24,7 +24,7 @@ function fixture(options = {}, overrides = {}) {
   return { streams, emitted, navigation, records, manager, push(path, value) { streams.get(path).push(value) } }
 }
 
-test('refreshes navigation without repeating the waypoint-change announcement', () => {
+test('suppresses stale established navigation and fresh data recovers', () => {
   let clock = 1000
   let refresh
   const originalSetInterval = global.setInterval
@@ -40,6 +40,11 @@ test('refreshes navigation without repeating the waypoint-change announcement', 
     assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85', '0x82'])
     clock = 3000
     refresh()
+    assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85', '0x82'])
+    assert.equal(f.manager.getState().lastSuppressionReason, 'navigation-stale')
+    f.push('navigation.course.calcValues.distance', 900)
+    f.push('navigation.course.calcValues.bearingTrue', Math.PI / 3)
+    f.push('navigation.course.calcValues.crossTrackError', 9)
     assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85', '0x82', '0x85'])
     assert.equal(f.manager.getState().calculationsAvailable, true)
     f.manager.stop()
@@ -110,10 +115,10 @@ test('rate limits calculation update bursts on the SeaTalk bus', () => {
   f.push('navigation.course.calcValues.distance', 999)
   f.push('navigation.course.calcValues.bearingTrue', Math.PI / 3)
   f.push('navigation.course.calcValues.crossTrackError', 9)
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85'])
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82'])
   clock = 2000
   f.push('navigation.course.calcValues.crossTrackError', 8)
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x85'])
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82', '0x85'])
   f.manager.stop()
 })
 
@@ -134,7 +139,53 @@ test('complete calculations arriving after the target emit 0x85 followed by 0x82
   f.push('navigation.course.calcValues.distance', 900)
   f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
   f.push('navigation.course.calcValues.crossTrackError', 10)
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85'])
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82'])
+  f.manager.stop()
+})
+
+test('delayed navigation emits one synchronization 0x82 and refreshes only 0x85', () => {
+  let clock = 1000
+  const f = fixture({ bearingReference: 'true', updateIntervalMs: 1000, maximumAgeMs: 5000, now: () => clock })
+  f.push('navigation.course.nextPoint', { id: 'a', name: 'WPT1' })
+  f.push('navigation.course.calcValues.distance', 900)
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
+  f.push('navigation.course.calcValues.crossTrackError', 10)
+  clock = 2000
+  f.push('navigation.course.calcValues.distance', 800)
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82', '0x85'])
+  f.manager.stop()
+})
+
+test('suppresses mixed-generation snapshots and accepts calculations within the skew window', () => {
+  let clock = 1000
+  const f = fixture({ bearingReference: 'true', updateIntervalMs: 100, maximumAgeMs: 5000, calculationSkewMs: 100, now: () => clock })
+  f.push('navigation.course.nextPoint', { id: 'a' })
+  f.push('navigation.course.calcValues.distance', 1000)
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 4)
+  f.push('navigation.course.calcValues.crossTrackError', 10)
+  clock = 1500
+  f.push('navigation.course.calcValues.distance', 900)
+  assert.equal(f.manager.getState().lastSuppressionReason, 'navigation-incoherent')
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82'])
+  clock = 1540
+  f.push('navigation.course.calcValues.bearingTrue', Math.PI / 3)
+  clock = 1580
+  f.push('navigation.course.calcValues.crossTrackError', 9)
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82', '0x85'])
+  f.manager.stop()
+})
+
+test('canonical null calculation fields use legacy fallbacks', () => {
+  const f = fixture({ bearingReference: 'true' })
+  f.push('navigation.course.calcValues.distance', null)
+  f.push('navigation.courseGreatCircle.nextPoint.distance', 1200)
+  f.push('navigation.course.calcValues.bearingTrue', null)
+  f.push('navigation.courseRhumbline.nextPoint.bearingToDestinationTrue', Math.PI / 3)
+  f.push('navigation.course.calcValues.crossTrackError', null)
+  f.push('navigation.courseGreatCircle.crossTrackError', 12)
+  f.push('navigation.course.nextPoint', { id: 'a' })
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85', '0x82'])
+  assert.deepEqual(f.emitted[0].metadata.values, { distance: 1200, crossTrackError: 12, bearing: Math.PI / 3, bearingTrue: true })
   f.manager.stop()
 })
 
@@ -185,7 +236,7 @@ test('does not pair a replacement target with cached calculations for the previo
   f.push('navigation.course.calcValues.distance', 900)
   f.push('navigation.course.calcValues.bearingTrue', Math.PI / 3)
   f.push('navigation.course.calcValues.crossTrackError', 9)
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85', '0x82', '0x82', '0x85'])
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x85', '0x82', '0x82', '0x85', '0x82'])
   f.manager.stop()
 })
 
@@ -225,7 +276,7 @@ test('stale calculations suppress only 0x85 and fresh data recovers', () => {
   f.push('navigation.course.calcValues.distance', 900)
   f.push('navigation.course.calcValues.bearingTrue', Math.PI / 3)
   f.push('navigation.course.calcValues.crossTrackError', 9)
-  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85'])
+  assert.deepEqual(f.emitted.map(item => item.datagram), ['0x82', '0x85', '0x82'])
   f.manager.stop()
 })
 

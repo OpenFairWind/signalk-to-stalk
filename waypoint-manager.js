@@ -28,6 +28,7 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
   let announcedNameQuality = -1
   let active = false
   let navigationEstablished = false
+  let waypointSyncPending = false
   let calculationsAvailable = false
   let lastWaypointAt = 0
   let lastNavigationAt = 0
@@ -36,6 +37,7 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
   const config = {
     updateIntervalMs: numberOption(options.updateIntervalMs, 1000, 100),
     maximumAgeMs: numberOption(options.maximumAgeMs, 5000, 100),
+    calculationSkewMs: numberOption(options.calculationSkewMs, 1000, 0),
     bearingReference: ['true', 'magnetic', 'auto'].includes(options.bearingReference) ? options.bearingReference : 'magnetic',
     waypointNameFallback: options.waypointNameFallback || 'WP',
     sendWaypointNameOnClear: options.sendWaypointNameOnClear === true
@@ -61,19 +63,19 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
   }
 
   function update(field, path, priority, value) {
-    state[field].set(path, { value, priority, timestamp: now() })
+    state[field].set(path, { value, priority, timestamp: now(), sourcePath: path })
     if (field === 'nextPoint' || (field === 'activeRoute' && active)) handleTargetChange()
     else if (active) publishNavigation(false)
   }
 
-  function current(field) {
+  function current(field, canonicalNullIsAuthoritative = false) {
     const entries = Array.from(state[field].values()).sort((a, b) => a.priority - b.priority)
-    if (entries[0]?.priority === 0) return entries[0].value == null ? undefined : entries[0]
+    if (canonicalNullIsAuthoritative && entries[0]?.priority === 0) return entries[0].value == null ? undefined : entries[0]
     return entries.find(entry => entry.value != null)
   }
 
   function handleTargetChange() {
-    const target = current('nextPoint')?.value
+    const target = current('nextPoint', true)?.value
     const identity = targetIdentityOf(target)
     if (!identity) {
       clearTarget()
@@ -90,6 +92,7 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     resolvedWaypointQuality = resolved.quality
     if (targetChanged) {
       navigationEstablished = false
+      waypointSyncPending = false
       calculationsAvailable = false
       lastNavigationAt = 0
     }
@@ -106,6 +109,7 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     announcedName = name
     announcedNameQuality = quality
     lastWaypointAt = now()
+    if (!navigationEstablished && reason !== 'navigation-sync') waypointSyncPending = true
     telemetry?.record({ type: 'navigation', action: reason === 'waypoint-name-change' ? 'waypoint-name-updated' : 'waypoint-announced', targetIdentity, waypointName: name })
     updateTelemetry()
   }
@@ -115,6 +119,7 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     if (config.sendWaypointNameOnClear) emit('0x82', encode82('', config.waypointNameFallback), { reason: 'target-cleared' })
     active = false
     navigationEstablished = false
+    waypointSyncPending = false
     targetIdentity = undefined
     announcedIdentity = undefined
     resolvedWaypointName = undefined
@@ -135,7 +140,8 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     const snapshot = navigationSnapshot()
     if (!snapshot) return suppressNavigation('navigation-unavailable')
     const emittedAt = now()
-    if (!navigationEstablished && emittedAt - snapshot.oldest > config.maximumAgeMs) return suppressNavigation('navigation-stale', { ageMs: emittedAt - snapshot.oldest })
+    if (emittedAt - snapshot.oldest > config.maximumAgeMs) return suppressNavigation('navigation-stale', { ageMs: emittedAt - snapshot.oldest })
+    if (snapshot.newest - snapshot.oldest > config.calculationSkewMs) return suppressNavigation('navigation-incoherent', { skewMs: snapshot.newest - snapshot.oldest })
     if (!targetChanged && lastNavigationAt && emittedAt - lastNavigationAt < config.updateIntervalMs) return false
     const invalidReason = validateNavigation(snapshot.values)
     if (invalidReason) return suppressNavigation(invalidReason)
@@ -145,11 +151,16 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     lastNavigationAt = emittedAt
     telemetry?.record({ type: 'navigation', action: 'navigation-emitted', targetIdentity })
     updateTelemetry(snapshot.values)
+    const synchronizeWaypoint = waypointSyncPending && announcedIdentity === targetIdentity
+    navigationEstablished = true
     if (announcedIdentity !== targetIdentity || announcedName !== resolvedWaypointName) {
       announceWaypoint(resolvedWaypointName, resolvedWaypointQuality,
-        !navigationEstablished ? 'target-change' : 'waypoint-name-change')
+        'target-change')
+      waypointSyncPending = false
+    } else if (synchronizeWaypoint) {
+      announceWaypoint(resolvedWaypointName, resolvedWaypointQuality, 'navigation-sync')
+      waypointSyncPending = false
     }
-    navigationEstablished = true
     return true
   }
 
@@ -190,7 +201,7 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
       bearingTrue = true
     } else if (config.bearingReference === 'magnetic') {
       bearing = magneticBearing || (trueBearing && variation
-        ? { value: trueBearing.value - variation.value, timestamp: Math.max(trueBearing.timestamp, variation.timestamp) }
+        ? { value: trueBearing.value - variation.value, timestamps: [trueBearing.timestamp, variation.timestamp] }
         : trueBearing)
       bearingTrue = !magneticBearing && !variation && Boolean(trueBearing)
     } else {
@@ -198,9 +209,10 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
       bearingTrue = !magneticBearing && Boolean(trueBearing)
     }
     if (!distance || !xte || !bearing) return undefined
-    const timestamps = [distance, xte, bearing].filter(Boolean).map(entry => entry.timestamp)
+    const timestamps = [distance, xte, ...(bearing.timestamps || [bearing.timestamp])].filter(Boolean).map(entry => typeof entry === 'number' ? entry : entry.timestamp)
     return {
       oldest: Math.min(...timestamps),
+      newest: Math.max(...timestamps),
       values: {
         distance: distance?.value,
         crossTrackError: xte?.value,

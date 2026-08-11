@@ -177,6 +177,11 @@ function buildSchema(plugin) {
         title: 'Maximum navigation-data age',
         description: 'Suppress navigation output when required Signal K values are older than this limit, in milliseconds.'
       },
+      calculationSkewMs: {
+        type: 'integer', minimum: 0, default: 1000,
+        title: 'Maximum calculation timestamp skew',
+        description: 'Suppress 0x85 when its distance, cross-track error, and bearing timestamps differ by more than this many milliseconds.'
+      },
       bearingReference: {
         type: 'string', enum: ['magnetic', 'true', 'auto'], default: 'magnetic',
         enumNames: ['Magnetic', 'True', 'Automatic'],
@@ -353,6 +358,7 @@ function configurationSummary(options, datagrams) {
       enabled: options.navigationToWaypoint?.enabled === true,
       updateIntervalMs: options.navigationToWaypoint?.updateIntervalMs ?? 1000,
       maximumAgeMs: options.navigationToWaypoint?.maximumAgeMs ?? 5000,
+      calculationSkewMs: options.navigationToWaypoint?.calculationSkewMs ?? 1000,
       bearingReference: options.navigationToWaypoint?.bearingReference ?? 'magnetic',
       sendInvalidOnClear: false,
       sendWaypointNameOnClear: options.navigationToWaypoint?.sendWaypointNameOnClear === true

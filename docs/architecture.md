@@ -47,13 +47,15 @@ navigation.course.nextPoint
   -> duplicate-suppressed 0x82 announcement
 
 navigation.course.calcValues.*
-  -> freshness and bearing-reference selection
+  -> field-specific fallback, freshness, timestamp coherence and bearing-reference selection
   -> periodic or change-driven 0x85 guidance
 ```
 
-The waypoint manager owns the active identity, resolved and announced names, calculation availability, suppression reason, and last emission times. It emits only complete, range-checked and rate-limited `0x85` guidance frames and sends `0x85` before `0x82` when calculations are already available at selection time. While a target remains active it refreshes only `0x85`, retaining the last established calculation because Signal K streams may suppress unchanged values. The `0x82` waypoint-change announcement is emitted only for a real target or improved-name change. Target clear or replacement discards cached calculations so they cannot be paired with another waypoint. Magnetic mode safely falls back to a correctly flagged true bearing when variation is unavailable. Target clearing does not fabricate an invalid partial navigation frame.
+The waypoint manager owns the active identity, resolved and announced names, calculation availability, suppression reason, and last emission times. It emits only complete, fresh, timestamp-coherent, range-checked and rate-limited `0x85` guidance frames and sends `0x85` before `0x82` when calculations are already available at selection time. Retained calculations may refresh `0x85` only within the configured finite age. If a waypoint was announced before calculations became valid, the first `0x85` is followed by one synchronization `0x82`; periodic refresh emits only `0x85`. Target clear or replacement discards cached calculations and resets synchronization state. Magnetic mode safely falls back to a correctly flagged true bearing when variation is unavailable. Target clearing does not fabricate an invalid partial navigation frame.
 
 Canonical `navigation.course.nextPoint` state is authoritative once that path has emitted. In particular, a canonical null clears the target even if a legacy path retains an older value. Before the canonical path has emitted, the first usable legacy great-circle or rhumb-line value is accepted. This avoids combining a current canonical target with stale legacy state.
+
+Calculation selection deliberately differs: a valid canonical `navigation.course.calcValues.*` entry wins, but a canonical null permits a valid legacy Great Circle or Rhumbline fallback.
 
 ## Telemetry and WebApp
 

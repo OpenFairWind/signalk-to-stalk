@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 2.0.9 - 2026-08-11
+
+### Fixed
+
+- Suppress stale or mixed-generation `0x85` guidance, allow legacy calculation fallbacks when canonical values are null, and send at most one `0x82` synchronization after delayed navigation establishment.
+
 ## 2.0.8 - 2026-08-07
 
 ### Fixed
