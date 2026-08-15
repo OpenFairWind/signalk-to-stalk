@@ -16,6 +16,9 @@
 - Added the 2026-08-15 vessel test record for the first successful live-bus
   `0x50`/`0x51` GPS position test through the GadgetPool converter and the
   independent GPIO20 receiver.
+- Added a complete decision matrix for all commands documented by Thomas Knauf
+  revision 3.22, including implementation status, exclusions, and safety
+  boundaries.
 
 ## Unreleased
 

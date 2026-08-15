@@ -13,7 +13,9 @@ Each direct conversion can be enabled independently:
 - `0x52` speed over ground;
 - `0x53` magnetic course over ground;
 - `0x54` UTC time;
-- `0x56` UTC date.
+- `0x56` UTC date;
+- `0x57` GNSS satellite count and horizontal dilution of precision;
+- `0x99` compass variation.
 
 Each direct conversion also has a minimum output interval in milliseconds. Set the interval to `0` to emit every accepted value change.
 
@@ -22,6 +24,14 @@ angle is expressed in radians with negative values to port; SeaTalk `0x10`
 uses a clockwise angle right of the bow in half-degree increments. Signal K
 apparent wind speed is metres per second; SeaTalk `0x11` carries knots with one
 decimal place. Values outside the representable SeaTalk range are rejected.
+
+`0x57` requires both `navigation.gnss.satellites` and
+`navigation.gnss.horizontalDilution`. The satellite count is limited to the
+four-bit SeaTalk field and HDOP is encoded in tenths.
+
+`0x99` converts Signal K's east-positive magnetic variation in radians to
+SeaTalk's west-positive signed whole degrees. It therefore depends on a
+selected, trustworthy `navigation.magneticVariation` source.
 
 ## Waypoint Guidance
 
