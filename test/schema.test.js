@@ -27,7 +27,7 @@ test('settings schema exposes every implemented feature without non-functional c
   assert.equal(schema.type, 'object')
   assert.equal(schema.additionalProperties, false)
 
-  for (const command of ['0x50', '0x51', '0x52', '0x53', '0x54', '0x56']) {
+  for (const command of ['0x50', '0x51', '0x52', '0x53', '0x54', '0x56', '0x57', '0x99']) {
     assert.equal(schema.properties[command].type, 'boolean')
     assert.match(schema.properties[command].description, /Signal K|navigation/)
     assert.equal(schema.properties[`${command}_throttle`].type, 'integer')

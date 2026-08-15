@@ -30,9 +30,12 @@ first; the final wind test enabled only the apparent-wind datagrams:
 | `0x56` | Date | 1000 ms |
 | `0x10` | Apparent wind angle | 1000 ms |
 | `0x11` | Apparent wind speed | 1000 ms |
+| `0x57` | GNSS satellites and HDOP | 1000 ms |
+| `0x99` | Compass variation | 1000 ms |
 
-Datagram `0x53` (magnetic course) was disabled because the available source
-reported zero magnetic variation and was not considered trustworthy.
+Datagram `0x53` (magnetic course) was enabled after a separately tested WMM
+source supplied `navigation.magneticVariation`. The same preferred Signal K
+path was subsequently used for `0x99`.
 
 The Signal K connection `SeatalkBridge` was enabled with `toStdout` set to
 `stalkout`. Its NMEA 0183 event injection was suppressed during the test.
@@ -93,6 +96,20 @@ After cleanup, one Signal K server process owned both the FTDI provider and the
 GPIO line, and no serial lock errors occurred in the current process. The
 Signal K socket and the separate health-check timer were also restored.
 
+The later variation and GNSS-quality extension produced these frames:
+
+```text
+$STALK,99,00,10*6C
+$STALK,57,90,07*61
+```
+
+Command `0x99` represents 16 degrees west. The source value was approximately
+15.88 degrees west; SeaTalk1 command `0x99` carries whole degrees and uses the
+opposite sign convention from Signal K. Command `0x57` represents 9 satellites
+and HDOP 0.7. Generation, throttling, checksums, and forwarding through the
+configured `stalkout` route were confirmed. No claim is made here that every
+connected legacy display presents fields from these optional commands.
+
 ## Incident during setup
 
 A command intended only to print the Signal K version started an unintended
@@ -124,6 +141,7 @@ Signal K apparent wind
   -> SeaTalk1 wind instrument
 ```
 
-This result validates position, speed over ground, UTC/date encoding, and
-apparent wind angle/speed. It does not validate magnetic course, source
-selection among competing inputs, or stale-data handling.
+This result validates position, speed over ground, UTC/date encoding, apparent
+wind angle/speed, and generation of the `0x57` and `0x99` extension frames. It
+does not validate presentation of `0x57`/`0x99` on every connected instrument,
+source selection among competing inputs, or stale-data handling.

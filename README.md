@@ -32,8 +32,10 @@ The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTa
 | `0x53` | `navigation.courseOverGroundTrue`, `navigation.magneticVariation` | Magnetic COG |
 | `0x54` | `navigation.datetime` | UTC time |
 | `0x56` | `navigation.datetime` | UTC date |
+| `0x57` | `navigation.gnss.satellites`, `navigation.gnss.horizontalDilution` | GNSS satellites and HDOP |
 | `0x82` | `navigation.course.nextPoint` and waypoint metadata | Four-character target waypoint identifier |
 | `0x85` | `navigation.course.calcValues.*` | XTE, bearing and distance to target |
+| `0x99` | `navigation.magneticVariation` | Compass variation (whole degrees) |
 
 Legacy `navigation.courseGreatCircle.*` and `navigation.courseRhumbline.*` paths are accepted as fallbacks for waypoint guidance.
 

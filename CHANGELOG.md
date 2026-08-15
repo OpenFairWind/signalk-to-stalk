@@ -6,6 +6,10 @@
 
 - Added apparent wind angle (`0x10`) and speed (`0x11`) encoders with Signal K
   unit and port/starboard conversion, range validation, and encoder vectors.
+- Added compass variation (`0x99`) with explicit Signal K east-positive to
+  SeaTalk west-positive conversion and range validation.
+- Added GNSS satellites and HDOP (`0x57`) with packed satellite count and
+  tenths-of-HDOP encoding.
 
 ### Documentation
 

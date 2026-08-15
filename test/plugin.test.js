@@ -39,7 +39,7 @@ test('plugin schema includes all datagrams and throttle properties', () => {
   const app = mockApp()
   const plugin = loadPluginFactory()(app)
   assert.equal(plugin.id, 'signalk-to-stalk')
-  for (const key of ['0x50', '0x51', '0x52', '0x53', '0x54', '0x56']) {
+  for (const key of ['0x50', '0x51', '0x52', '0x53', '0x54', '0x56', '0x57', '0x99']) {
     assert.ok(plugin.schema.properties[key])
     assert.ok(plugin.schema.properties[`${key}_throttle`])
   }

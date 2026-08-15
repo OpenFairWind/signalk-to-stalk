@@ -61,10 +61,25 @@ test('0x56 packs UTC date and enforces representable years', () => {
   assert.throws(() => encoder('0x56')('1999-01-01T00:00:00Z'), RangeError)
 })
 
+test('0x57 packs satellite count and HDOP in tenths', () => {
+  assert.equal(payload(encoder('0x57')(9, 0.7)), '$STALK,57,90,07')
+  assert.equal(payload(encoder('0x57')(1, 14.8)), '$STALK,57,10,94')
+  assert.throws(() => encoder('0x57')(16, 0.7), RangeError)
+  assert.throws(() => encoder('0x57')(9, 25.6), RangeError)
+})
+
+test('0x99 converts Signal K east-positive variation to SeaTalk west-positive whole degrees', () => {
+  assert.equal(payload(encoder('0x99')(-15.88 * Math.PI / 180)), '$STALK,99,00,10')
+  assert.equal(payload(encoder('0x99')(4.6 * Math.PI / 180)), '$STALK,99,00,FB')
+  assert.throws(() => encoder('0x99')(31 * Math.PI / 180), RangeError)
+})
+
 test('encoders ignore unavailable values and reject malformed values', () => {
   assert.equal(encoder('0x10')(null), undefined)
   assert.equal(encoder('0x11')(null), undefined)
   assert.equal(encoder('0x50')(null), undefined)
+  assert.equal(encoder('0x57')(null, 0.7), undefined)
+  assert.equal(encoder('0x99')(null), undefined)
   assert.throws(() => encoder('0x52')(-1), RangeError)
   assert.throws(() => encoder('0x54')('not-a-date'), TypeError)
 })
