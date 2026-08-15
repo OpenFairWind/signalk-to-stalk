@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Documentation
+
+- Added the 2026-08-15 vessel test record for the first successful live-bus
+  `0x50`/`0x51` GPS position test through the GadgetPool converter and the
+  independent GPIO20 receiver.
+
+## Unreleased
+
 ## 2.0.9 - 2026-08-11
 
 ### Fixed
