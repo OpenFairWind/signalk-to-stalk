@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- Added apparent wind angle (`0x10`) and speed (`0x11`) encoders with Signal K
+  unit and port/starboard conversion, range validation, and encoder vectors.
+
 ### Documentation
 
 - Added the 2026-08-15 vessel test record for the first successful live-bus

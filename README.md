@@ -6,7 +6,7 @@ The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTa
 
 ## Features
 
-- Direct datagram conversions for position, speed over ground, course over ground, UTC time, and UTC date.
+- Direct datagram conversions for apparent wind, position, speed over ground, course over ground, UTC time, and UTC date.
 - Passive target waypoint guidance using fresh, coherent mode-5 `0x85` calculations and one-time `0x82` waypoint announcements/synchronization.
 - SeaTalk display-unit synchronization using command `0x24`.
 - SeaTalk display-light synchronization using command `0x30`.
@@ -24,6 +24,8 @@ The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTa
 
 | SeaTalk command | Signal K source | Meaning |
 |---|---|---|
+| `0x10` | `environment.wind.angleApparent` | Apparent wind angle |
+| `0x11` | `environment.wind.speedApparent` | Apparent wind speed |
 | `0x50` | `navigation.position.latitude` | Latitude |
 | `0x51` | `navigation.position.longitude` | Longitude |
 | `0x52` | `navigation.speedOverGround` | Speed over ground |

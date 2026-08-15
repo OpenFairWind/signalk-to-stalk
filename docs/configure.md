@@ -6,6 +6,8 @@ Plugin settings are managed in the Signal K plugin settings UI. The bundled WebA
 
 Each direct conversion can be enabled independently:
 
+- `0x10` apparent wind angle;
+- `0x11` apparent wind speed;
 - `0x50` latitude;
 - `0x51` longitude;
 - `0x52` speed over ground;
@@ -14,6 +16,12 @@ Each direct conversion can be enabled independently:
 - `0x56` UTC date.
 
 Each direct conversion also has a minimum output interval in milliseconds. Set the interval to `0` to emit every accepted value change.
+
+Enable `0x10` and `0x11` together for apparent wind. Signal K apparent wind
+angle is expressed in radians with negative values to port; SeaTalk `0x10`
+uses a clockwise angle right of the bow in half-degree increments. Signal K
+apparent wind speed is metres per second; SeaTalk `0x11` carries knots with one
+decimal place. Values outside the representable SeaTalk range are rejected.
 
 ## Waypoint Guidance
 
