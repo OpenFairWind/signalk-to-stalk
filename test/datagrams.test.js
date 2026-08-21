@@ -5,6 +5,22 @@ const assert = require('node:assert/strict')
 const encoder = name => require(`../datagrams/${name}`)().f
 const payload = sentence => sentence.slice(0, sentence.indexOf('*'))
 
+test('0x10 converts Signal K apparent wind angles to degrees right of bow', () => {
+  const f = encoder('0x10')
+  assert.equal(payload(f(0)), '$STALK,10,01,00,00')
+  assert.equal(payload(f(5 * Math.PI / 180)), '$STALK,10,01,00,0A')
+  assert.equal(payload(f(-5 * Math.PI / 180)), '$STALK,10,01,02,C6')
+  assert.equal(payload(f(359.9 * Math.PI / 180)), '$STALK,10,01,00,00')
+})
+
+test('0x11 converts Signal K apparent wind speed to knots and tenths', () => {
+  const f = encoder('0x11')
+  assert.equal(payload(f(0)), '$STALK,11,01,00,00')
+  assert.equal(payload(f(7.253668504262688)), '$STALK,11,01,0E,01')
+  assert.throws(() => f(-1), RangeError)
+  assert.throws(() => f(100), RangeError)
+})
+
 test('0x50 encodes latitude with South flag', () => {
   assert.equal(payload(encoder('0x50')({ latitude: -40.5 })), '$STALK,50,02,28,B8,8B')
 })
@@ -45,8 +61,25 @@ test('0x56 packs UTC date and enforces representable years', () => {
   assert.throws(() => encoder('0x56')('1999-01-01T00:00:00Z'), RangeError)
 })
 
+test('0x57 packs satellite count and HDOP in tenths', () => {
+  assert.equal(payload(encoder('0x57')(9, 0.7)), '$STALK,57,90,07')
+  assert.equal(payload(encoder('0x57')(1, 14.8)), '$STALK,57,10,94')
+  assert.throws(() => encoder('0x57')(16, 0.7), RangeError)
+  assert.throws(() => encoder('0x57')(9, 25.6), RangeError)
+})
+
+test('0x99 converts Signal K east-positive variation to SeaTalk west-positive whole degrees', () => {
+  assert.equal(payload(encoder('0x99')(-15.88 * Math.PI / 180)), '$STALK,99,00,10')
+  assert.equal(payload(encoder('0x99')(4.6 * Math.PI / 180)), '$STALK,99,00,FB')
+  assert.throws(() => encoder('0x99')(31 * Math.PI / 180), RangeError)
+})
+
 test('encoders ignore unavailable values and reject malformed values', () => {
+  assert.equal(encoder('0x10')(null), undefined)
+  assert.equal(encoder('0x11')(null), undefined)
   assert.equal(encoder('0x50')(null), undefined)
+  assert.equal(encoder('0x57')(null, 0.7), undefined)
+  assert.equal(encoder('0x99')(null), undefined)
   assert.throws(() => encoder('0x52')(-1), RangeError)
   assert.throws(() => encoder('0x54')('not-a-date'), TypeError)
 })

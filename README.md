@@ -9,7 +9,7 @@ The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTa
 
 ## Features
 
-- Direct datagram conversions for position, speed over ground, course over ground, UTC time, and UTC date.
+- Direct datagram conversions for apparent wind, position, speed/course over ground, UTC time/date, GNSS quality, and magnetic variation.
 - Passive target waypoint guidance using fresh, coherent mode-5 `0x85` calculations and one-time `0x82` waypoint announcements/synchronization.
 - SeaTalk display-unit synchronization using command `0x24`.
 - SeaTalk display-light synchronization using command `0x30`.
@@ -21,20 +21,38 @@ The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTa
 - [Install](docs/install.md)
 - [Configure](docs/configure.md)
 - [Architecture](docs/architecture.md)
+- [Knauf command coverage and decisions](docs/knauf-coverage.md)
 - [Changelog](CHANGELOG.md)
 
 ## Supported conversions
 
+### Knauf coverage summary
+
+| Current status | Knauf commands | Policy |
+| --- | --- | --- |
+| Implemented direct conversion | `0x10`, `0x11`, `0x50`–`0x54`, `0x56`, `0x57`, `0x99` | Independent, validated Signal K data converted at the SeaTalk boundary |
+| Implemented managed feature | `0x24`, `0x30`, `0x82`, `0x85` | Stateful units, lights, and passive waypoint guidance |
+| Not implemented | All other commands listed by Knauf | Deferred, redundant, device-owned, insufficiently defined, or outside the safety boundary |
+
+The [complete Knauf matrix](docs/knauf-coverage.md) lists every command in
+revision 3.22 and records the specific reason for implementing or excluding it.
+
+### Implemented commands
+
 | SeaTalk command | Signal K source | Meaning |
 |---|---|---|
+| `0x10` | `environment.wind.angleApparent` | Apparent wind angle |
+| `0x11` | `environment.wind.speedApparent` | Apparent wind speed |
 | `0x50` | `navigation.position.latitude` | Latitude |
 | `0x51` | `navigation.position.longitude` | Longitude |
 | `0x52` | `navigation.speedOverGround` | Speed over ground |
 | `0x53` | `navigation.courseOverGroundTrue`, `navigation.magneticVariation` | Magnetic COG |
 | `0x54` | `navigation.datetime` | UTC time |
 | `0x56` | `navigation.datetime` | UTC date |
+| `0x57` | `navigation.gnss.satellites`, `navigation.gnss.horizontalDilution` | GNSS satellites and HDOP |
 | `0x82` | `navigation.course.nextPoint` and waypoint metadata | Four-character target waypoint identifier |
 | `0x85` | Course calculations or local position geometry | XTE, bearing and distance to target |
+| `0x99` | `navigation.magneticVariation` | Compass variation (whole degrees) |
 
 Legacy `navigation.courseGreatCircle.*` and `navigation.courseRhumbline.*` paths are accepted as fallbacks for waypoint guidance.
 Fresh Course API calculations take priority; basic Freeboard direct-to guidance can fall back to vessel and target positions. New targets are emitted coherently as `0x85` followed by `0x82`.
