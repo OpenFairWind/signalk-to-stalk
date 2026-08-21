@@ -1,6 +1,9 @@
 # signalk-to-stalk
 
-Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.9 is the stable release for the current architecture.
+[![CI](https://github.com/OpenFairWind/signalk-to-stalk/actions/workflows/test.yml/badge.svg)](https://github.com/OpenFairWind/signalk-to-stalk/actions/workflows/test.yml)
+[![npm](https://img.shields.io/npm/v/signalk-to-stalk.svg)](https://www.npmjs.com/package/signalk-to-stalk)
+
+Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.10 is the stable release for the current architecture.
 
 The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTalk Technical Reference.
 
@@ -48,10 +51,11 @@ revision 3.22 and records the specific reason for implementing or excluding it.
 | `0x56` | `navigation.datetime` | UTC date |
 | `0x57` | `navigation.gnss.satellites`, `navigation.gnss.horizontalDilution` | GNSS satellites and HDOP |
 | `0x82` | `navigation.course.nextPoint` and waypoint metadata | Four-character target waypoint identifier |
-| `0x85` | `navigation.course.calcValues.*` | XTE, bearing and distance to target |
+| `0x85` | Course calculations or local position geometry | XTE, bearing and distance to target |
 | `0x99` | `navigation.magneticVariation` | Compass variation (whole degrees) |
 
 Legacy `navigation.courseGreatCircle.*` and `navigation.courseRhumbline.*` paths are accepted as fallbacks for waypoint guidance.
+Fresh Course API calculations take priority; basic Freeboard direct-to guidance can fall back to vessel and target positions. New targets are emitted coherently as `0x85` followed by `0x82`.
 
 Signal K angles are radians, speed is metres per second, distances are metres, and timestamps are UTC-capable ISO-8601 values.
 
@@ -76,6 +80,8 @@ After installation and server restart, open **Signal K to SeaTalk Monitor** from
 
 The monitor shows configured features, runtime state, live outgoing datagrams, suppressions, errors, per-command counters, waypoint state, synchronized units, display-light state, and speed and heading calibration advice. It is read-only.
 
+The WebApps dashboard icon is supplied as a 72×72 PNG through Signal K's `signalk.appIcon` metadata; the scalable icon remains available to the browser manifest.
+
 ## Development
 
 ```bash
@@ -83,6 +89,8 @@ npm install
 npm run check
 npm test
 ```
+
+GitHub Actions runs these checks and verifies the npm package contents on pushes and pull requests. Publishing is handled by the npm release workflow after a GitHub release is published and its `v<version>` tag matches `package.json`. See [Publishing to npm](docs/publish-to-npm.md) for setup and release details.
 
 ## References
 

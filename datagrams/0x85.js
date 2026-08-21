@@ -40,8 +40,9 @@ function encodeNavigation({ crossTrackError, bearing, distance, bearingTrue = fa
     if (distance < 0) throw new RangeError('distance must not be negative')
     const nauticalMiles = distance / METRES_PER_NAUTICAL_MILE
     let encoded
-    if (nauticalMiles < 10) {
-      encoded = Math.round(nauticalMiles * 100)
+    const hundredths = Math.round((nauticalMiles + 1e-12) * 100)
+    if (hundredths < 1000) {
+      encoded = hundredths
       y |= 0x01
     } else {
       encoded = Math.round(nauticalMiles * 10)

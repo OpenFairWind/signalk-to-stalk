@@ -2,9 +2,14 @@
 
 const create82 = require('./datagrams/0x82')
 const create85 = require('./datagrams/0x85')
+const { calculateNavigation, validatePosition } = require('./navigation-geometry')
 
 const PATHS = {
   nextPoint: ['navigation.course.nextPoint', 'navigation.courseGreatCircle.nextPoint', 'navigation.courseRhumbline.nextPoint'],
+  nextPointPosition: ['navigation.course.nextPoint.position'],
+  previousPoint: ['navigation.course.previousPoint'],
+  previousPointPosition: ['navigation.course.previousPoint.position'],
+  vesselPosition: ['navigation.position'],
   activeRoute: ['navigation.course.activeRoute'],
   distance: ['navigation.course.calcValues.distance', 'navigation.courseGreatCircle.nextPoint.distance', 'navigation.courseRhumbline.nextPoint.distance'],
   bearingTrue: ['navigation.course.calcValues.bearingTrue', 'navigation.courseGreatCircle.nextPoint.bearingTrue', 'navigation.courseRhumbline.nextPoint.bearingToDestinationTrue'],
@@ -98,8 +103,8 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     }
     if (targetChanged) telemetry?.record({ type: 'navigation', action: 'target-selected', targetIdentity })
     const navigationSent = publishNavigation(targetChanged)
-    if (!navigationSent && (targetChanged || announcedIdentity !== identity || (announcedName !== name && resolved.quality >= announcedNameQuality))) {
-      announceWaypoint(name, resolved.quality, targetChanged ? 'target-change' : 'waypoint-name-change')
+    if (!navigationSent && !targetChanged && navigationEstablished && announcedName !== name && resolved.quality >= announcedNameQuality) {
+      announceWaypoint(name, resolved.quality, 'waypoint-name-change')
     }
   }
 
@@ -137,20 +142,24 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
 
   function publishNavigation(targetChanged) {
     if (!active) return false
-    const snapshot = navigationSnapshot()
-    if (!snapshot) return suppressNavigation('navigation-unavailable')
+    let snapshot = navigationSnapshot()
+    if (!snapshot) return suppressNavigation(navigationUnavailableReason())
     const emittedAt = now()
-    if (emittedAt - snapshot.oldest > config.maximumAgeMs) return suppressNavigation('navigation-stale', { ageMs: emittedAt - snapshot.oldest })
-    if (snapshot.newest - snapshot.oldest > config.calculationSkewMs) return suppressNavigation('navigation-incoherent', { skewMs: snapshot.newest - snapshot.oldest })
+    if (snapshot.source !== 'local-fallback' && (emittedAt - snapshot.oldest > config.maximumAgeMs || snapshot.newest - snapshot.oldest > config.calculationSkewMs)) {
+      const fallback = localNavigationSnapshot()
+      if (fallback && emittedAt - fallback.oldest <= config.maximumAgeMs && fallback.newest - fallback.oldest <= config.calculationSkewMs) snapshot = fallback
+    }
+    if (emittedAt - snapshot.oldest > config.maximumAgeMs) return suppressNavigation('stale-navigation-data', { ageMs: emittedAt - snapshot.oldest })
+    if (snapshot.newest - snapshot.oldest > config.calculationSkewMs) return suppressNavigation('navigation-data-skew', { skewMs: snapshot.newest - snapshot.oldest })
     if (!targetChanged && lastNavigationAt && emittedAt - lastNavigationAt < config.updateIntervalMs) return false
     const invalidReason = validateNavigation(snapshot.values)
     if (invalidReason) return suppressNavigation(invalidReason)
     calculationsAvailable = true
     lastSuppressionReason = undefined
-    emit('0x85', encode85(snapshot.values), { reason: targetChanged ? 'target-change' : 'navigation-refresh', values: snapshot.values, targetIdentity })
+    emit('0x85', encode85(snapshot.values), { reason: targetChanged ? 'target-change' : 'navigation-refresh', values: snapshot.values, navigationSource: snapshot.source, targetIdentity })
     lastNavigationAt = emittedAt
-    telemetry?.record({ type: 'navigation', action: 'navigation-emitted', targetIdentity })
-    updateTelemetry(snapshot.values)
+    telemetry?.record({ type: 'navigation', action: 'navigation-emitted', targetIdentity, source: snapshot.source })
+    updateTelemetry({ ...snapshot.values, navigationSource: snapshot.source })
     const synchronizeWaypoint = waypointSyncPending && announcedIdentity === targetIdentity
     navigationEstablished = true
     if (announcedIdentity !== targetIdentity || announcedName !== resolvedWaypointName) {
@@ -208,11 +217,12 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
       bearing = magneticBearing || trueBearing
       bearingTrue = !magneticBearing && Boolean(trueBearing)
     }
-    if (!distance || !xte || !bearing) return undefined
+    if (!distance || !xte || !bearing) return localNavigationSnapshot()
     const timestamps = [distance, xte, ...(bearing.timestamps || [bearing.timestamp])].filter(Boolean).map(entry => typeof entry === 'number' ? entry : entry.timestamp)
     return {
       oldest: Math.min(...timestamps),
       newest: Math.max(...timestamps),
+      source: distance.priority === 0 && xte.priority === 0 && (trueBearing?.priority === 0 || magneticBearing?.priority === 0) ? 'calcValues' : 'legacy-course',
       values: {
         distance: distance?.value,
         crossTrackError: xte?.value,
@@ -220,6 +230,36 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
         bearingTrue
       }
     }
+  }
+
+  function localNavigationSnapshot() {
+    const vessel = current('vesselPosition')
+    const target = current('nextPoint', true)
+    const explicitTargetPosition = current('nextPointPosition')
+    const targetPosition = explicitTargetPosition?.value || target?.value?.position
+    const previous = current('previousPointPosition') || current('previousPoint')
+    const previousPosition = previous?.value?.position || previous?.value
+    if (!vessel || !targetPosition) return undefined
+    try {
+      validatePosition(vessel.value, 'navigation.position')
+      validatePosition(targetPosition, 'navigation.course.nextPoint.position')
+      if (previousPosition) validatePosition(previousPosition, 'navigation.course.previousPoint.position')
+      const values = calculateNavigation(vessel.value, targetPosition, previousPosition)
+      const timestamps = [vessel.timestamp, explicitTargetPosition?.timestamp || target.timestamp]
+      if (previousPosition) timestamps.push(previous.timestamp)
+      return { oldest: Math.min(...timestamps), newest: Math.max(...timestamps), source: 'local-fallback', values: { distance: values.distance, bearing: values.bearingTrue, crossTrackError: values.crossTrackError, bearingTrue: true } }
+    } catch (error) {
+      return undefined
+    }
+  }
+
+  function navigationUnavailableReason() {
+    const target = current('nextPoint', true)?.value
+    if (!target) return 'missing-next-point'
+    const targetPosition = current('nextPointPosition')?.value || target.position
+    if (!targetPosition) return 'missing-next-point-position'
+    if (!current('vesselPosition')) return 'missing-vessel-position'
+    return 'invalid-coordinate'
   }
 
   return { start, stop, getState: () => ({ active, targetIdentity, resolvedWaypointName, announcedIdentity, announcedName, calculationsAvailable, lastWaypointAt, lastNavigationAt, lastSuppressionReason }) }

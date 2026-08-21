@@ -28,11 +28,16 @@ These constraints apply to coding agents working in this repository.
 ## Validation Constraints
 
 - Run `npm run check` and `npm test` before committing code changes.
+- Run `npm pack --dry-run` for every release-facing change and whenever package metadata, WebApp assets, workflows, or publish contents change.
 - Add or update tests for encoder vectors, manager lifecycle behavior, settings-schema changes, telemetry output, and WebApp read-only guarantees.
-- Run `npm pack --dry-run` when package metadata or publish contents change.
+- Keep `.github/workflows/test.yml` aligned with the locally required checks and supported Node.js versions.
+- Do not bypass or weaken CI checks to make a change pass.
 
 ## Packaging Constraints
 
 - Keep `package.json` repository metadata aligned with `https://github.com/OpenFairWind/signalk-to-stalk`.
 - Keep npm package contents controlled through the `files` whitelist.
 - Do not include IDE folders, local caches, generated tarballs, or credentials in commits or published packages.
+- Keep `signalk.appIcon` relative to `public/`; use a packaged raster image of at least 72 by 72 pixels for Signal K dashboard compatibility.
+- Publish only from a GitHub release tag matching `v<package.json version>` or an explicitly authorized manual workflow run.
+- Keep npm credentials in the `NPM_TOKEN` GitHub Actions secret and never commit or print them.

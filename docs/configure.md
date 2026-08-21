@@ -56,11 +56,11 @@ Example:
 
 When a target is selected or advanced, the plugin emits:
 
-1. `0x85` with bearing, range, and cross-track error when a complete fresh calculation is already available.
-2. `0x82` with the target identifier. If the calculation is not yet complete, `0x82` is sent immediately; when the first valid `0x85` later follows, one synchronization `0x82` is sent immediately after it.
+1. `0x85` with bearing, range, and cross-track error from a coherent navigation solution.
+2. `0x82` with the matching target identifier.
 
 Subsequent calculation changes refresh `0x85` without repeatedly announcing `0x82`.
-A Course API calculation provider such as `@signalk/course-provider` may be needed to produce bearing, range, or cross-track error, but it is not required to announce the target waypoint. Stale or missing calculations suppress only `0x85`; they never delay a new `0x82` announcement.
+The manager prefers fresh `navigation.course.calcValues`, then supported legacy Great Circle/Rhumbline calculations, then local great-circle geometry from `navigation.position` and `navigation.course.nextPoint.position`. A previous-point position supplies signed XTE; direct-to guidance without a leg origin uses XTE zero because no physically meaningful lateral error exists. A new waypoint name is deliberately delayed until a coherent `0x85` can be sent, preventing an ST60 from associating the new name with absent or previous guidance.
 
 When the target is cleared, periodic navigation output stops. No invalid `0x85` is emitted because older instruments can interpret a partial or invalid frame as an error. Sending a fallback `0x82` during clear is optional and disabled by default.
 
@@ -81,6 +81,10 @@ Navigation frames are rate-limited to the configured refresh interval. Invalid o
 `maximumAgeMs` applies both when guidance is first established and to later refreshes. Unchanged values may be retained and refreshed only while every required calculation remains within that finite age. `calculationSkewMs` (default 1000 ms) prevents a frame from mixing distance, cross-track error, and bearing updates from different calculation cycles. Stale or incoherent snapshots suppress `0x85` and recover automatically when fresh, coherent values arrive.
 
 Canonical `navigation.course.calcValues.*` values have priority when valid. If one is null or unavailable, the documented Great Circle and Rhumbline paths remain calculation fallbacks. In contrast, a canonical null target is an authoritative clear. The one synchronization `0x82` described above is never periodically refreshed, avoiding repeated audible waypoint behavior.
+
+### Waypoint name visible but BTW/XTE missing
+
+Check `navigation.course.nextPoint`, its `.position`, `navigation.position`, and (for meaningful XTE) `navigation.course.previousPoint.position`. The read-only monitor reports the selected source (`calcValues`, `legacy-course`, or `local-fallback`) and a suppression reason such as `missing-next-point-position`, `missing-vessel-position`, stale/skewed data, invalid coordinates, or a SeaTalk field-range limit. On the output side, a coherent target change must appear as `$STALK,85,...` followed by `$STALK,82,...`.
 
 ## Display Units
 

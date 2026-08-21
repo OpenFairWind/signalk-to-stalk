@@ -50,3 +50,9 @@ test('0x85 encodes the captured Freeboard course values as passive mode 5 with c
   })
   assert.deepEqual(bytes(sentence), [0x85, 0x06, 0x19, 0x61, 0x05, 0x9e, 0x05, 0x00, 0xfa])
 })
+
+test('0x85 selects long-range resolution after rounding at 10 nm', () => {
+  const bytes = create85.encodeNavigation({ crossTrackError: 0, bearing: 0, distance: 9.995 * 1852, bearingTrue: true })
+  assert.equal((bytes[6] >> 4) & 1, 0)
+  assert.equal(((bytes[4] >> 4) << 8) | bytes[5], 100)
+})

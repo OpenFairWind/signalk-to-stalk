@@ -32,7 +32,7 @@ Managed datagrams, such as `0x24`, `0x30`, `0x82`, and `0x85`, are used by manag
 
 Stateful features live in manager modules:
 
-- `waypoint-manager.js` tracks active targets, waypoint names, stale navigation values, periodic refresh, and clear behavior.
+- `waypoint-manager.js` tracks active targets, waypoint names, source priority, stale navigation values, periodic refresh, and clear behavior. `navigation-geometry.js` provides pure great-circle DTW/BTW/XTE fallback calculations.
 - `units-manager.js` resolves Signal K display preferences or fixed settings and emits coherent `0x24` unit updates.
 - `lights-manager.js` maps Signal K or configured brightness values to SeaTalk `0x30` lamp levels.
 - `calibration-manager.js` maintains independent rolling speed and circular heading samples and publishes read-only calibration advice through telemetry.
@@ -51,7 +51,7 @@ navigation.course.calcValues.*
   -> periodic or change-driven 0x85 guidance
 ```
 
-The waypoint manager owns the active identity, resolved and announced names, calculation availability, suppression reason, and last emission times. It emits only complete, fresh, timestamp-coherent, range-checked and rate-limited `0x85` guidance frames and sends `0x85` before `0x82` when calculations are already available at selection time. Retained calculations may refresh `0x85` only within the configured finite age. If a waypoint was announced before calculations became valid, the first `0x85` is followed by one synchronization `0x82`; periodic refresh emits only `0x85`. Target clear or replacement discards cached calculations and resets synchronization state. Magnetic mode safely falls back to a correctly flagged true bearing when variation is unavailable. Target clearing does not fabricate an invalid partial navigation frame.
+The waypoint manager owns the active identity, resolved and announced names, calculation availability, suppression reason, source, and last emission times. It selects fresh canonical calculations, then legacy calculations, then coherent local geometry. It emits only complete, fresh, timestamp-coherent, range-checked and rate-limited `0x85` guidance frames. A new target is never announced alone: the sequence is always `0x85` then `0x82`. Periodic refresh emits only `0x85`. Target clear or replacement discards cached calculations and resets synchronization state. Magnetic mode safely falls back to a correctly flagged true bearing when variation is unavailable. Target clearing does not fabricate an invalid partial navigation frame.
 
 Canonical `navigation.course.nextPoint` state is authoritative once that path has emitted. In particular, a canonical null clears the target even if a legacy path retains an older value. Before the canonical path has emitted, the first usable legacy great-circle or rhumb-line value is accepted. This avoids combining a current canonical target with stale legacy state.
 
@@ -68,6 +68,8 @@ The WebApp in `public/` consumes:
 - `api/stream` for live events.
 
 The WebApp renders an indicator for every implemented SeaTalk command, including commands that are disabled or have not emitted yet. Each indicator combines its configured state with the process counter and latest observed datagram. The WebApp is deliberately read-only. Local filtering and pause controls affect only browser rendering.
+
+Signal K resolves `signalk.appIcon` relative to `public/`. Package metadata therefore points to the 72×72 PNG dashboard asset as `./icon-72x72.png`; `public/icon.svg` remains the scalable browser favicon and maskable manifest icon.
 
 ## Schema Generation
 
@@ -97,3 +99,5 @@ npm test
 ```
 
 Use focused tests for behavior changes. Add broader regression coverage when changing shared helpers, schema generation, telemetry, or manager lifecycle behavior.
+
+GitHub Actions runs the syntax checks, tests, and package dry run across the supported Node.js matrix. The release workflow repeats validation and publishes to npm only after checking that a GitHub release tag matches the package version.
