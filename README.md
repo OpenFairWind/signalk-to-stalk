@@ -1,6 +1,6 @@
 # signalk-to-stalk
 
-Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.9 is the stable release for the current architecture.
+Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.10 is the stable release for the current architecture.
 
 The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTalk Technical Reference.
 
@@ -31,9 +31,10 @@ The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTa
 | `0x54` | `navigation.datetime` | UTC time |
 | `0x56` | `navigation.datetime` | UTC date |
 | `0x82` | `navigation.course.nextPoint` and waypoint metadata | Four-character target waypoint identifier |
-| `0x85` | `navigation.course.calcValues.*` | XTE, bearing and distance to target |
+| `0x85` | Course calculations or local position geometry | XTE, bearing and distance to target |
 
 Legacy `navigation.courseGreatCircle.*` and `navigation.courseRhumbline.*` paths are accepted as fallbacks for waypoint guidance.
+Fresh Course API calculations take priority; basic Freeboard direct-to guidance can fall back to vessel and target positions. New targets are emitted coherently as `0x85` followed by `0x82`.
 
 Signal K angles are radians, speed is metres per second, distances are metres, and timestamps are UTC-capable ISO-8601 values.
 

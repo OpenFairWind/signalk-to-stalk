@@ -22,6 +22,8 @@ test('brightness values map to four discrete levels', () => {
   assert.equal(brightnessToLevel(75, 'percent'), 3)
   assert.equal(brightnessToLevel(2, 'level'), 2)
   assert.equal(brightnessToLevel(50, 'auto'), 2)
+  assert.equal(brightnessToLevel(1, 'auto'), 3)
+  assert.equal(brightnessToLevel(1, 'level'), 1)
 })
 
 test('manager sends startup value, suppresses duplicate, and sends changes', () => {
@@ -57,4 +59,26 @@ test('configuration source supports inversion', () => {
   })
   manager.start()
   assert.deepEqual(emitted, [['0x30', 'light:3']])
+})
+
+test('rate limiter sends the latest trailing light level and cancels it on stop', () => {
+  let clock = 1000
+  let callback
+  const emitted = []
+  const manager = createLightsManager({ error() {} }, (_id, sentence) => emitted.push(sentence), { f: level => `light:${level}` }, {
+    source: 'configuration', sendOnStartup: false, minimumIntervalMs: 250, now: () => clock,
+    setTimeout(fn) { callback = fn; return 1 }, clearTimeout() { callback = undefined }
+  })
+  manager.processValue(0, 'first')
+  clock = 1100
+  manager.processValue(1, 'second')
+  manager.processValue(0.8, 'third')
+  assert.deepEqual(emitted, ['light:0'])
+  clock = 1250
+  callback()
+  assert.deepEqual(emitted, ['light:0', 'light:3'])
+  clock = 1300
+  manager.processValue(0.5)
+  manager.stop()
+  assert.equal(callback, undefined)
 })

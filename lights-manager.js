@@ -4,6 +4,11 @@ module.exports = function createLightsManager(app, emitDatagram, encoder, option
   let unsubscribe
   let lastLevel
   let lastSentAt = 0
+  let pending
+  let timer
+  const now = typeof options.now === 'function' ? options.now : Date.now
+  const schedule = typeof options.setTimeout === 'function' ? options.setTimeout : setTimeout
+  const cancel = typeof options.clearTimeout === 'function' ? options.clearTimeout : clearTimeout
 
   const settings = {
     source: options.source || 'signalKPath',
@@ -40,6 +45,9 @@ module.exports = function createLightsManager(app, emitDatagram, encoder, option
       try { unsubscribe() } catch (error) { app.error(`Display-light unsubscribe failed: ${error.stack || error}`) }
     }
     unsubscribe = undefined
+    if (timer) cancel(timer)
+    timer = undefined
+    pending = undefined
     lastLevel = undefined
     lastSentAt = 0
   }
@@ -48,15 +56,33 @@ module.exports = function createLightsManager(app, emitDatagram, encoder, option
     try {
       let level = brightnessToLevel(value, settings.valueFormat)
       if (settings.invert) level = 3 - level
-      const now = Date.now()
+      const timestamp = now()
       if (level === lastLevel) {
         telemetry?.record({ type: 'suppressed', component: 'lights', reason: 'duplicate-light-level', level })
         return false
       }
-      if (lastSentAt && now - lastSentAt < settings.minimumIntervalMs) {
+      if (lastSentAt && timestamp - lastSentAt < settings.minimumIntervalMs) {
+        pending = { value, level, reason }
+        if (!timer) timer = schedule(flushPending, settings.minimumIntervalMs - (timestamp - lastSentAt))
         telemetry?.record({ type: 'suppressed', component: 'lights', reason: 'light-rate-limit', level })
         return false
       }
+      return send(value, level, reason, timestamp)
+    } catch (error) {
+      report(error)
+      return false
+    }
+  }
+
+  function flushPending() {
+    timer = undefined
+    const item = pending
+    pending = undefined
+    if (item) send(item.value, item.level, item.reason, now())
+  }
+
+  function send(value, level, reason, timestamp) {
+    try {
       emitDatagram('0x30', encoder.f(level), {
         reason,
         lightLevel: level,
@@ -64,16 +90,20 @@ module.exports = function createLightsManager(app, emitDatagram, encoder, option
         sourceValue: value
       })
       lastLevel = level
-      lastSentAt = now
-      telemetry?.setLights({ level, source: settings.source, path: settings.signalKPath, lastSentAt: now })
+      lastSentAt = timestamp
+      telemetry?.setLights({ level, source: settings.source, path: settings.signalKPath, lastSentAt: timestamp })
       return true
     } catch (error) {
-      const message = `Failed to synchronize SeaTalk display lights: ${error.message}`
-      app.error(error.stack ? `${message}\n${error.stack}` : message)
-      telemetry?.record({ type: 'error', component: 'lights', message })
-      if (typeof app.setPluginError === 'function') app.setPluginError(message)
+      report(error)
       return false
     }
+  }
+
+  function report(error) {
+    const message = `Failed to synchronize SeaTalk display lights: ${error.message}`
+    app.error(error.stack ? `${message}\n${error.stack}` : message)
+    telemetry?.record({ type: 'error', component: 'lights', message })
+    if (typeof app.setPluginError === 'function') app.setPluginError(message)
   }
 
   return { start, stop, processValue, settings }
@@ -85,8 +115,8 @@ function brightnessToLevel(value, format = 'auto') {
 
   let selected = format
   if (selected === 'auto') {
-    if (Number.isInteger(value) && value >= 0 && value <= 3) selected = 'level'
-    else if (value >= 0 && value <= 1) selected = 'ratio'
+    if (value >= 0 && value <= 1) selected = 'ratio'
+    else if (Number.isInteger(value) && value >= 0 && value <= 3) selected = 'level'
     else if (value >= 0 && value <= 100) selected = 'percent'
     else throw new RangeError('automatic brightness values must be 0..1, 0..3 integer, or 0..100')
   }

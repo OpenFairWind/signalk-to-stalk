@@ -4,7 +4,7 @@
 
 The plugin is designed for installations that need to feed SeaTalk1-compatible equipment through a Signal K output path such as a STALK-capable NMEA 0183 provider, SeaTalk bridge, or adapter.
 
-Version 2.0.9 is the stable release target for the current datagram-manager architecture and read-only monitor.
+Version 2.0.10 is the stable release target for the current datagram-manager architecture and read-only monitor.
 
 ## What It Does
 
@@ -36,9 +36,11 @@ Waypoint guidance also uses:
 | SeaTalk command | Signal K source | Meaning |
 | --- | --- | --- |
 | `0x82` | `navigation.course.nextPoint` and waypoint metadata | Four-character target waypoint identifier |
-| `0x85` | `navigation.course.calcValues.*` | XTE, bearing, steering direction, and distance to target |
+| `0x85` | Course calculations, or vessel/target positions as fallback | XTE, bearing, steering direction, and distance to target |
 
 Legacy `navigation.courseGreatCircle.*` and `navigation.courseRhumbline.*` paths are accepted as fallbacks for waypoint guidance.
+
+For Freeboard-SK **Navigate To**, the flow is Freeboard → Signal K Course API → this plugin → SeaTalk `0x85` → `0x82` → ST60. If Course API calculation values are absent, vessel and target positions are sufficient for local DTW/BTW; a previous-point position additionally provides signed XTE.
 
 ## Units
 

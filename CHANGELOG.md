@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 2.0.10 - 2026-08-21
+
+### Added
+
+- Add pure great-circle geometry for local distance, true bearing, and signed cross-track-error fallback during Freeboard-SK direct-to navigation.
+- Report the active navigation source and precise guidance-suppression reasons through existing read-only telemetry.
+
+### Fixed
+
+- Make Freeboard-SK direct-to guidance self-sufficient when Course API calculations are absent but vessel and destination positions are available.
+- Delay new waypoint announcements until a coherent passive `0x85` frame can be emitted, preserving the required `0x85` then `0x82` sequence and preventing stale target/navigation associations.
+- Fall back from stale or skewed authoritative calculations to fresh coherent local geometry when possible.
+- Make SeaTalk `0x85` distance quantization deterministic at the 10 nm resolution boundary while preserving passive mode `F=5`.
+- Preserve the latest rate-limited display-light request for a trailing emission and cancel pending emissions on shutdown.
+- Interpret Signal K `dimmingLevel` value `1.0` as 100 percent brightness in automatic mode while retaining explicit raw-level mode.
+
 ## 2.0.9 - 2026-08-11
 
 ### Fixed
