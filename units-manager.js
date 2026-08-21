@@ -39,8 +39,9 @@ module.exports = function createUnitsManager(app, emitDatagram, encoder, options
       }
       const refreshMs = settings.periodicRefreshSeconds > 0 ? settings.periodicRefreshSeconds * 1000 : 0
       const refreshDue = refreshMs > 0 && (!evaluate.lastSentAt || Date.now() - evaluate.lastSentAt >= refreshMs)
-      if (force || system !== lastSystem || refreshDue) {
-        emitDatagram('0x24', encoder.f(system), { reason: force ? 'unit-startup' : (system !== lastSystem ? 'unit-change' : 'unit-refresh'), unitSystem: system })
+      const changed = system !== lastSystem
+      if (force || (settings.resendOnChange && changed) || refreshDue) {
+        emitDatagram('0x24', encoder.f(system), { reason: force ? 'unit-startup' : (changed ? 'unit-change' : 'unit-refresh'), unitSystem: system })
         lastSystem = system
         evaluate.lastSentAt = Date.now()
         telemetry?.setUnits({ system, lastSentAt: evaluate.lastSentAt, source: settings.source })

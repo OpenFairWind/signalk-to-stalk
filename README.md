@@ -92,6 +92,10 @@ npm test
 
 GitHub Actions runs these checks and verifies the npm package contents on pushes and pull requests. Publishing is handled by the npm release workflow after a GitHub release is published and its `v<version>` tag matches `package.json`. See [Publishing to npm](docs/publish-to-npm.md) for setup and release details.
 
+## Contributors
+
+- [haipule](https://github.com/haipule)
+
 ## References
 
 - Signal K specification 1.8.2: <https://signalk.org/specification/1.8.2/doc/>

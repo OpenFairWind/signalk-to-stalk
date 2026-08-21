@@ -59,6 +59,32 @@ test('start is restart-safe and stop clears unsubscribe callbacks', () => {
   assert.equal(app.status.at(-1), 'Stopped')
 })
 
+test('invalid restart configuration leaves the running instance intact', () => {
+  const app = mockApp()
+  const plugin = loadPluginFactory()(app)
+  plugin.start({ '0x50': true })
+  assert.throws(() => plugin.start({ '0x51': 'yes' }), /0x51 must be a boolean/)
+  assert.equal(plugin.unsubscribes.length, 1)
+  assert.equal(plugin.telemetry.snapshot().running, true)
+  assert.match(app.status.at(-1), /Running/)
+  plugin.stop()
+})
+
+test('startup failure cleans up subscriptions created earlier in the attempt', () => {
+  const app = mockApp()
+  const plugin = loadPluginFactory()(app)
+  const originalSubscribe = plugin.datagrams['0x51'].keys
+  plugin.datagrams['0x51'].keys = ['failing.path']
+  app.streambundle.getSelfStream = path => {
+    if (path === 'failing.path') throw new Error('subscription failed')
+    return { merge() { return this } }
+  }
+  assert.throws(() => plugin.start({ '0x50': true, '0x51': true }), /subscription failed/)
+  assert.equal(plugin.unsubscribes.length, 0)
+  assert.equal(plugin.telemetry.snapshot().running, false)
+  plugin.datagrams['0x51'].keys = originalSubscribe
+})
+
 test('stop closes telemetry stream clients', () => {
   const app = mockApp()
   const plugin = loadPluginFactory()(app)

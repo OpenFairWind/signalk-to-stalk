@@ -71,6 +71,14 @@ test('current schema rejects legacy and unknown configuration properties', () =>
   assert.throws(() => factory.validateCurrentConfiguration({ instrumentUnits: { source: 'configuration' } }, plugin.schema), /speedAndDistance is required/)
   assert.doesNotThrow(() => factory.validateCurrentConfiguration({ instrumentUnits: { enabled: true, source: 'configuration', speedAndDistance: 'nautical' } }, plugin.schema))
   assert.throws(() => factory.validateCurrentConfiguration({ navigationToWaypoint: { sendInvalidOnClear: true } }, plugin.schema), /must be false/)
+  assert.throws(() => factory.validateCurrentConfiguration({ '0x50': 'yes' }, plugin.schema), /0x50 must be a boolean/)
+  assert.throws(() => factory.validateCurrentConfiguration({ '0x50_throttle': -1 }, plugin.schema), /must be at least 0/)
+  assert.throws(() => factory.validateCurrentConfiguration({ navigationToWaypoint: { bearingReference: 'relative' } }, plugin.schema), /must be one of/)
+  assert.throws(() => factory.validateCurrentConfiguration({ navigationToWaypoint: { maximumAgeMs: NaN } }, plugin.schema), /must be an integer/)
+  assert.throws(() => factory.validateCurrentConfiguration({ instrumentLights: { configuredLevel: 4 } }, plugin.schema), /must be at most 3/)
+  assert.throws(() => factory.validateCurrentConfiguration({ calibrationAdvisor: { minimumSamples: 30, windowSize: 20 } }, plugin.schema), /must not exceed windowSize/)
+  assert.throws(() => factory.validateCurrentConfiguration({ calibrationAdvisor: { minimumSamples: 121 } }, plugin.schema), /must not exceed windowSize/)
+  assert.throws(() => factory.validateCurrentConfiguration({ calibrationAdvisor: { headingMinimumSamples: 30, headingWindowSize: 20 } }, plugin.schema), /must not exceed headingWindowSize/)
 })
 
 test('configuration summary exposes all implemented features to the WebApp', () => {

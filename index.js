@@ -52,39 +52,44 @@ module.exports = function createPlugin(app) {
   }
 
   plugin.start = function start(options = {}) {
-    plugin.stop()
     validateCurrentConfiguration(options, plugin.schema)
-    plugin.telemetry.setConfiguration(configurationSummary(options, plugin.datagrams))
-    let active = 0
-    Object.keys(plugin.datagrams).forEach(name => {
-      if (plugin.datagrams[name].managed || !options[name]) return
-      subscribe(plugin.datagrams[name], options[getThrottleProperty(name)])
-      active += 1
-    })
-    if (options.instrumentUnits?.enabled && plugin.datagrams['0x24']) {
-      plugin.unitsManager = createUnitsManager(app, emitDatagram, plugin.datagrams['0x24'], options.instrumentUnits, plugin.telemetry)
-      plugin.unitsManager.start()
-      active += 1
+    plugin.stop()
+    try {
+      plugin.telemetry.setConfiguration(configurationSummary(options, plugin.datagrams))
+      let active = 0
+      Object.keys(plugin.datagrams).forEach(name => {
+        if (plugin.datagrams[name].managed || !options[name]) return
+        subscribe(plugin.datagrams[name], options[getThrottleProperty(name)])
+        active += 1
+      })
+      if (options.instrumentUnits?.enabled && plugin.datagrams['0x24']) {
+        plugin.unitsManager = createUnitsManager(app, emitDatagram, plugin.datagrams['0x24'], options.instrumentUnits, plugin.telemetry)
+        plugin.unitsManager.start()
+        active += 1
+      }
+      if (options.instrumentLights?.enabled && plugin.datagrams['0x30']) {
+        plugin.lightsManager = createLightsManager(app, emitDatagram, plugin.datagrams['0x30'], options.instrumentLights, plugin.telemetry)
+        plugin.lightsManager.start()
+        active += 1
+      }
+      if (options.calibrationAdvisor?.enabled) {
+        plugin.calibrationManager = createCalibrationManager(app, options.calibrationAdvisor, plugin.telemetry)
+        plugin.calibrationManager.start()
+        active += 1
+      }
+      if (options.navigationToWaypoint?.enabled) {
+        plugin.waypointManager = createWaypointManager(app, emitDatagram, options.navigationToWaypoint, plugin.telemetry)
+        plugin.waypointManager.start()
+        active += 2
+      }
+      const status = `Running with ${active} datagram${active === 1 ? '' : 's'} enabled`
+      plugin.telemetry.setRunning(true, status)
+      plugin.telemetry.record({ type: 'lifecycle', action: 'start', active })
+      if (typeof app.setPluginStatus === 'function') app.setPluginStatus(status)
+    } catch (error) {
+      plugin.stop()
+      throw error
     }
-    if (options.instrumentLights?.enabled && plugin.datagrams['0x30']) {
-      plugin.lightsManager = createLightsManager(app, emitDatagram, plugin.datagrams['0x30'], options.instrumentLights, plugin.telemetry)
-      plugin.lightsManager.start()
-      active += 1
-    }
-    if (options.calibrationAdvisor?.enabled) {
-      plugin.calibrationManager = createCalibrationManager(app, options.calibrationAdvisor, plugin.telemetry)
-      plugin.calibrationManager.start()
-      active += 1
-    }
-    if (options.navigationToWaypoint?.enabled) {
-      plugin.waypointManager = createWaypointManager(app, emitDatagram, options.navigationToWaypoint, plugin.telemetry)
-      plugin.waypointManager.start()
-      active += 2
-    }
-    const status = `Running with ${active} datagram${active === 1 ? '' : 's'} enabled`
-    plugin.telemetry.setRunning(true, status)
-    plugin.telemetry.record({ type: 'lifecycle', action: 'start', active })
-    if (typeof app.setPluginStatus === 'function') app.setPluginStatus(status)
   }
 
   function subscribe(encoder, throttleMs) {
@@ -408,23 +413,47 @@ function configurationSummary(options, datagrams) {
 
 function validateCurrentConfiguration(options, schema) {
   if (!options || typeof options !== 'object' || Array.isArray(options)) throw new TypeError('Plugin configuration must be an object')
-  const allowed = new Set(Object.keys(schema.properties))
-  const unknown = Object.keys(options).filter(key => !allowed.has(key))
-  if (unknown.length) throw new Error(`Unsupported configuration properties: ${unknown.join(', ')}`)
-  for (const section of ['navigationToWaypoint', 'instrumentUnits', 'calibrationAdvisor', 'instrumentLights']) {
-    const value = options[section]
-    if (value === undefined) continue
-    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${section} must be an object`)
-    const sectionAllowed = new Set(Object.keys(schema.properties[section].properties))
-    const sectionUnknown = Object.keys(value).filter(key => !sectionAllowed.has(key))
-    if (sectionUnknown.length) throw new Error(`Unsupported ${section} properties: ${sectionUnknown.join(', ')}`)
-  }
-  if (options.instrumentUnits?.source === 'configuration' && options.instrumentUnits?.speedAndDistance === undefined) {
-    throw new Error('instrumentUnits.speedAndDistance is required when source is configuration')
-  }
   if (options.navigationToWaypoint?.sendInvalidOnClear === true) {
     throw new Error('navigationToWaypoint.sendInvalidOnClear must be false because partial 0x85 frames cause SeaTalk data errors')
   }
+  validateSchemaValue(options, schema, 'configuration')
+  if (options.instrumentUnits?.source === 'configuration' && options.instrumentUnits?.speedAndDistance === undefined) {
+    throw new Error('instrumentUnits.speedAndDistance is required when source is configuration')
+  }
+  const calibration = options.calibrationAdvisor
+  if ((calibration?.minimumSamples ?? 30) > (calibration?.windowSize ?? 120)) {
+    throw new Error('calibrationAdvisor.minimumSamples must not exceed windowSize')
+  }
+  if ((calibration?.headingMinimumSamples ?? 30) > (calibration?.headingWindowSize ?? 120)) {
+    throw new Error('calibrationAdvisor.headingMinimumSamples must not exceed headingWindowSize')
+  }
+}
+
+function validateSchemaValue(value, definition, label) {
+  if (definition.type === 'object') {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${label} must be an object`)
+    const properties = definition.properties || {}
+    if (definition.additionalProperties === false) {
+      const unknown = Object.keys(value).filter(key => !Object.hasOwn(properties, key))
+      if (unknown.length) throw new Error(`Unsupported ${label} properties: ${unknown.join(', ')}`)
+    }
+    for (const [key, child] of Object.entries(properties)) {
+      if (value[key] !== undefined) validateSchemaValue(value[key], child, label === 'configuration' ? key : `${label}.${key}`)
+    }
+    return
+  }
+  if (definition.type === 'boolean' && typeof value !== 'boolean') throw new TypeError(`${label} must be a boolean`)
+  if (definition.type === 'string') {
+    if (typeof value !== 'string') throw new TypeError(`${label} must be a string`)
+    if (definition.minLength !== undefined && value.length < definition.minLength) throw new RangeError(`${label} must contain at least ${definition.minLength} character(s)`)
+    if (definition.maxLength !== undefined && value.length > definition.maxLength) throw new RangeError(`${label} must contain at most ${definition.maxLength} character(s)`)
+  }
+  if (definition.type === 'number' && !Number.isFinite(value)) throw new TypeError(`${label} must be a finite number`)
+  if (definition.type === 'integer' && !Number.isInteger(value)) throw new TypeError(`${label} must be an integer`)
+  if (definition.enum && !definition.enum.includes(value)) throw new RangeError(`${label} must be one of: ${definition.enum.join(', ')}`)
+  if (definition.minimum !== undefined && value < definition.minimum) throw new RangeError(`${label} must be at least ${definition.minimum}`)
+  if (definition.maximum !== undefined && value > definition.maximum) throw new RangeError(`${label} must be at most ${definition.maximum}`)
+  if (definition.exclusiveMinimum !== undefined && value <= definition.exclusiveMinimum) throw new RangeError(`${label} must be greater than ${definition.exclusiveMinimum}`)
 }
 
 module.exports.configurationSummary = configurationSummary

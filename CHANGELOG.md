@@ -11,6 +11,7 @@
 - Added GNSS satellites and HDOP (`0x57`) with packed satellite count and
   tenths-of-HDOP encoding.
 - Add GitHub Actions CI across supported Node.js versions and npm publishing CD with package validation, release-tag verification, and provenance.
+- Added GitHub user [haipule](https://github.com/haipule) to the npm contributor metadata.
 
 ### Documentation
 
@@ -24,6 +25,11 @@
 ### Fixed
 
 - Make the WebApp icon visible in the Signal K dashboard by using a packaged 72×72 PNG and a `public/`-relative `signalk.appIcon` path.
+- Enforce settings-schema types, enums, ranges, string lengths, and calibration sample/window relationships during startup.
+- Validate replacement settings before stopping a healthy instance, and clean up partial runtime state when startup fails.
+- Prevent display-light rate limiting from emitting an obsolete trailing level after the source reverts or a newer immediate value is sent.
+- Respect disabled unit-preference change detection when periodic refresh polling is also enabled.
+- Track telemetry start time per running lifecycle and continue calibration cleanup if one unsubscribe callback fails.
 
 ## 2.0.10 - 2026-08-21
 

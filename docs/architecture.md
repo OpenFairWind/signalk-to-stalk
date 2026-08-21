@@ -12,6 +12,8 @@
 - emits generated sentences on `stalkout` and per-command events;
 - registers read-only WebApp API routes.
 
+Replacement settings are validated before the active runtime is stopped. Startup is transactional with respect to subscriptions and managers: if setup throws after partial initialization, `stop()` removes the partial resources and leaves a stopped runtime instead of a mixed configuration.
+
 ## Datagram Encoders
 
 Each file in `datagrams/` exports a factory for one SeaTalk command. Direct datagram modules define:
@@ -59,7 +61,7 @@ Calculation selection deliberately differs: a valid canonical `navigation.course
 
 ## Telemetry and WebApp
 
-`telemetry.js` keeps bounded recent events, counters, the last emitted sentence and bytes for every observed datagram, runtime state, resolved feature state, and configuration summaries. It also serves Server-Sent Events clients. Signal K mounts these read-only endpoints at `/plugins/signalk-to-stalk/api/status`, `/plugins/signalk-to-stalk/api/recent`, and `/plugins/signalk-to-stalk/api/stream`; the WebApp is mounted separately at `/signalk-to-stalk`.
+`telemetry.js` keeps bounded recent events, counters, the last emitted sentence and bytes for every observed datagram, runtime state, resolved feature state, and configuration summaries. Its `startedAt` value is assigned whenever a stopped runtime becomes running, so it identifies the current run rather than plugin construction time. It also serves Server-Sent Events clients. Signal K mounts these read-only endpoints at `/plugins/signalk-to-stalk/api/status`, `/plugins/signalk-to-stalk/api/recent`, and `/plugins/signalk-to-stalk/api/stream`; the WebApp is mounted separately at `/signalk-to-stalk`.
 
 The WebApp in `public/` consumes:
 
@@ -75,7 +77,7 @@ Signal K resolves `signalk.appIcon` relative to `public/`. Package metadata ther
 
 The settings schema is generated from datagram metadata and explicit managed-feature schemas in `index.js`.
 
-The root schema has `additionalProperties: false`, and managed feature sections also reject unknown properties. This prevents obsolete or misspelled settings from producing unclear runtime behavior.
+The root schema has `additionalProperties: false`, and managed feature sections also reject unknown properties. Runtime validation walks the generated schema and enforces its object, boolean, string, integer, number, enum, length, and range constraints. Cross-field checks additionally require fixed unit selections and attainable calibration sample counts. This prevents obsolete, misspelled, or structurally invalid settings from producing unclear runtime behavior.
 
 ## Data Flow
 

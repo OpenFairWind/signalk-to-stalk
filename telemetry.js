@@ -2,9 +2,10 @@
 
 module.exports = function createTelemetry(options = {}) {
   const capacity = Number.isInteger(options.capacity) && options.capacity > 0 ? options.capacity : 500
+  const now = typeof options.now === 'function' ? options.now : () => new Date()
   const events = []
   const clients = new Set()
-  const startedAt = new Date().toISOString()
+  let startedAt
   const counters = { emitted: 0, suppressed: 0, errors: 0 }
   const perDatagram = {}
   const lastDatagrams = {}
@@ -18,7 +19,7 @@ module.exports = function createTelemetry(options = {}) {
   let configuration = {}
 
   function record(event) {
-    const item = { time: new Date().toISOString(), ...event }
+    const item = { time: now().toISOString(), ...event }
     events.push(item)
     if (events.length > capacity) events.splice(0, events.length - capacity)
     if (item.type === 'emitted') {
@@ -43,7 +44,7 @@ module.exports = function createTelemetry(options = {}) {
       running,
       status,
       startedAt,
-      now: new Date().toISOString(),
+      now: now().toISOString(),
       outputEvent: 'stalkout',
       totals: { ...counters },
       perDatagram: { ...perDatagram },
@@ -80,7 +81,12 @@ module.exports = function createTelemetry(options = {}) {
       return events.slice(-count)
     },
     attachSse,
-    setRunning(value, text) { running = Boolean(value); if (text) status = text },
+    setRunning(value, text) {
+      const next = Boolean(value)
+      if (next && !running) startedAt = now().toISOString()
+      running = next
+      if (text) status = text
+    },
     setNavigation(value) { navigation = value || {} },
     setUnits(value) { units = value || {} },
     setLights(value) { lights = value || {} },

@@ -37,3 +37,15 @@ test('telemetry snapshot includes a detached configuration summary', () => {
   configuration.direct[0].enabled = false
   assert.equal(t.snapshot().configuration.direct[0].enabled, true)
 })
+
+test('telemetry start time tracks the latest running lifecycle', () => {
+  let clock = new Date('2026-08-21T01:00:00.000Z')
+  const t = createTelemetry({ now: () => clock })
+  assert.equal(t.snapshot().startedAt, undefined)
+  t.setRunning(true, 'Running')
+  assert.equal(t.snapshot().startedAt, '2026-08-21T01:00:00.000Z')
+  clock = new Date('2026-08-21T02:00:00.000Z')
+  t.setRunning(false, 'Stopped')
+  t.setRunning(true, 'Running again')
+  assert.equal(t.snapshot().startedAt, '2026-08-21T02:00:00.000Z')
+})

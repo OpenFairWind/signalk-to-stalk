@@ -122,7 +122,9 @@ module.exports = function createCalibrationManager(app, options = {}, telemetry)
   }
 
   function stop() {
-    unsubscribes.splice(0).forEach(unsubscribe => unsubscribe())
+    unsubscribes.splice(0).forEach(unsubscribe => {
+      try { unsubscribe() } catch (error) { app.error(`Calibration unsubscribe failed: ${error.stack || error}`) }
+    })
   }
 
   return { start, stop, addSample, addHeadingSample, snapshot: () => samples.slice(), headingSnapshot: () => headingSamples.slice() }

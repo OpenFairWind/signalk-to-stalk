@@ -24,12 +24,16 @@ A helmsperson must verify route, bearing, cross-track error, waypoint transition
 
 | SeaTalk command | Signal K source | Meaning |
 | --- | --- | --- |
+| `0x10` | `environment.wind.angleApparent` | Apparent wind angle |
+| `0x11` | `environment.wind.speedApparent` | Apparent wind speed |
 | `0x50` | `navigation.position.latitude` | Latitude |
 | `0x51` | `navigation.position.longitude` | Longitude |
 | `0x52` | `navigation.speedOverGround` | Speed over ground |
 | `0x53` | `navigation.courseOverGroundTrue`, `navigation.magneticVariation` | Magnetic COG |
 | `0x54` | `navigation.datetime` | UTC time |
 | `0x56` | `navigation.datetime` | UTC date |
+| `0x57` | `navigation.gnss.satellites`, `navigation.gnss.horizontalDilution` | GNSS satellites and HDOP |
+| `0x99` | `navigation.magneticVariation` | Compass variation |
 
 Waypoint guidance also uses:
 

@@ -82,3 +82,37 @@ test('rate limiter sends the latest trailing light level and cancels it on stop'
   manager.stop()
   assert.equal(callback, undefined)
 })
+
+test('rate limiter cancels a stale trailing level when the source reverts', () => {
+  let clock = 1000
+  let callback
+  const emitted = []
+  const manager = createLightsManager({ error() {} }, (_id, sentence) => emitted.push(sentence), { f: level => `light:${level}` }, {
+    source: 'configuration', sendOnStartup: false, minimumIntervalMs: 250, now: () => clock,
+    setTimeout(fn) { callback = fn; return 1 }, clearTimeout() { callback = undefined }
+  })
+  manager.processValue(0)
+  clock = 1100
+  manager.processValue(3)
+  assert.equal(typeof callback, 'function')
+  manager.processValue(0)
+  assert.equal(callback, undefined)
+  assert.deepEqual(emitted, ['light:0'])
+})
+
+test('an immediate light send replaces any obsolete pending update', () => {
+  let clock = 1000
+  let callback
+  const emitted = []
+  const manager = createLightsManager({ error() {} }, (_id, sentence) => emitted.push(sentence), { f: level => `light:${level}` }, {
+    source: 'configuration', sendOnStartup: false, minimumIntervalMs: 250, now: () => clock,
+    setTimeout(fn) { callback = fn; return 1 }, clearTimeout() { callback = undefined }
+  })
+  manager.processValue(0)
+  clock = 1100
+  manager.processValue(1)
+  clock = 1300
+  manager.processValue(3)
+  assert.equal(callback, undefined)
+  assert.deepEqual(emitted, ['light:0', 'light:3'])
+})

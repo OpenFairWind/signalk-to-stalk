@@ -58,6 +58,7 @@ module.exports = function createLightsManager(app, emitDatagram, encoder, option
       if (settings.invert) level = 3 - level
       const timestamp = now()
       if (level === lastLevel) {
+        clearPending()
         telemetry?.record({ type: 'suppressed', component: 'lights', reason: 'duplicate-light-level', level })
         return false
       }
@@ -67,6 +68,7 @@ module.exports = function createLightsManager(app, emitDatagram, encoder, option
         telemetry?.record({ type: 'suppressed', component: 'lights', reason: 'light-rate-limit', level })
         return false
       }
+      clearPending()
       return send(value, level, reason, timestamp)
     } catch (error) {
       report(error)
@@ -79,6 +81,12 @@ module.exports = function createLightsManager(app, emitDatagram, encoder, option
     const item = pending
     pending = undefined
     if (item) send(item.value, item.level, item.reason, now())
+  }
+
+  function clearPending() {
+    pending = undefined
+    if (timer) cancel(timer)
+    timer = undefined
   }
 
   function send(value, level, reason, timestamp) {

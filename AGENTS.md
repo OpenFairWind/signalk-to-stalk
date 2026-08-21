@@ -17,6 +17,9 @@ These constraints apply to coding agents working in this repository.
 - Keep stateful behavior in manager modules, not in datagram encoders.
 - Preserve strict configuration validation unless a migration path is intentionally designed and tested.
 - Do not silently accept obsolete configuration aliases.
+- Validate a replacement configuration before stopping a running instance, and clean up every partial subscription, manager, interval, or timeout when startup fails.
+- For rate-limited or trailing emissions, ensure the eventual output reflects the latest accepted source value; cancel obsolete pending work on reversion, replacement, and stop.
+- Make boolean feature controls and manager options exact: disabled change detection must not emit changes indirectly through another polling or refresh option.
 
 ## Documentation Constraints
 
@@ -24,12 +27,14 @@ These constraints apply to coding agents working in this repository.
 - Put detailed usage documentation in `docs/`.
 - Update `docs/configure.md` whenever settings schema behavior changes.
 - Update `docs/architecture.md` when runtime data flow, module ownership, or WebApp APIs change.
+- Document validation rules and interactions between settings, including cross-field constraints and restart behavior.
 
 ## Validation Constraints
 
 - Run `npm run check` and `npm test` before committing code changes.
 - Run `npm pack --dry-run` for every release-facing change and whenever package metadata, WebApp assets, workflows, or publish contents change.
 - Add or update tests for encoder vectors, manager lifecycle behavior, settings-schema changes, telemetry output, and WebApp read-only guarantees.
+- Cover failed and repeated starts, unsubscribe failures, pending-timer replacement/cancellation, and conflicting manager options when those paths change.
 - Keep `.github/workflows/test.yml` aligned with the locally required checks and supported Node.js versions.
 - Do not bypass or weaken CI checks to make a change pass.
 

@@ -3,10 +3,10 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const Module = require('node:module')
 
-function load() {
+function load(onValue = () => () => {}) {
   const original = Module._load
   Module._load = function(request, parent, isMain) {
-    if (request === 'baconjs') return { combineWith() { return { filter(){return this}, changes(){return this}, debounceImmediate(){return this}, onValue(){ return () => {} } } } }
+    if (request === 'baconjs') return { combineWith() { return { filter(){return this}, changes(){return this}, debounceImmediate(){return this}, onValue } } }
     return original.call(this, request, parent, isMain)
   }
   delete require.cache[require.resolve('../calibration-manager')]
@@ -41,4 +41,25 @@ test('heading advisor calculates a circular alignment suggestion across north', 
   assert.equal(headingCalibration.stable, true)
   assert.ok(Math.abs(headingCalibration.correctionDegrees - 5) < 1e-9)
   assert.ok(Math.abs(headingCalibration.suggestedHeadingOffsetDegrees - 7) < 1e-9)
+})
+
+test('calibration cleanup continues after an unsubscribe failure', () => {
+  let subscriptions = 0
+  let secondUnsubscribed = false
+  const create = load(() => {
+    subscriptions += 1
+    if (subscriptions === 1) return () => { throw new Error('first cleanup failed') }
+    return () => { secondUnsubscribed = true }
+  })
+  const errors = []
+  const app = {
+    streambundle: { getSelfStream() { return {} } },
+    error(message) { errors.push(message) }
+  }
+  const telemetry = { record() {}, setCalibration() {}, setHeadingCalibration() {} }
+  const manager = create(app, {}, telemetry)
+  manager.start()
+  manager.stop()
+  assert.equal(secondUnsubscribed, true)
+  assert.match(errors[0], /Calibration unsubscribe failed/)
 })

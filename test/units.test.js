@@ -55,7 +55,7 @@ test('manager emits once, suppresses duplicates, and emits on change', () => {
   const encoder = { f: system => `sentence:${system}` }
   const manager = createUnitsManager(app, (id, sentence) => emitted.push([id, sentence]), encoder, {
     sendOnStartup: false,
-    resendOnChange: false
+    resendOnChange: true
   })
   manager.evaluate(true)
   manager.evaluate(false)
@@ -74,4 +74,21 @@ test('fixed unit source does not consult Signal K preferences', () => {
   }
   assert.equal(resolveUnitSystem(app, { source: 'configuration', speedAndDistance: 'statute' }), 'statute')
   assert.equal(resolveUnitSystem(app, { source: 'configuration', speedAndDistance: 'auto' }), 'nautical')
+})
+
+test('periodic polling does not send preference changes when resend-on-change is disabled', () => {
+  let preference = { speed: 'kn', distance: 'nm' }
+  const emitted = []
+  const app = { getUnitPreferences: () => preference, debug() {}, error() {}, setPluginError() {} }
+  const manager = createUnitsManager(app, (_id, _sentence, details) => emitted.push(details), { f: system => system }, {
+    sendOnStartup: false,
+    resendOnChange: false,
+    periodicRefreshSeconds: 60
+  })
+  manager.evaluate(false)
+  preference = { speed: 'km/h', distance: 'km' }
+  manager.evaluate(false)
+  assert.equal(emitted.length, 1)
+  assert.equal(emitted[0].unitSystem, 'nautical')
+  manager.stop()
 })

@@ -63,6 +63,12 @@
   },
   "homepage": "https://github.com/OpenFairWind/signalk-to-stalk#readme",
   "license": "Apache-2.0",
+  "contributors": [
+    {
+      "name": "haipule",
+      "url": "https://github.com/haipule"
+    }
+  ],
   "signalk": {
     "displayName": "Signal K to SeaTalk Monitor",
     "appIcon": "./icon-72x72.png"
