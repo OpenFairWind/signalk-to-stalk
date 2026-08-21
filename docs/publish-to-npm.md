@@ -4,6 +4,8 @@ This guide describes how to publish `signalk-to-stalk` to the public
 [npm registry](https://www.npmjs.com/package/signalk-to-stalk) for the
 first time and how to release subsequent versions.
 
+The preferred release path is `.github/workflows/publish.yml`. It validates the package and publishes with npm provenance when a GitHub release is published. The manual commands below remain useful for preparation, recovery, and explicitly authorized manual releases.
+
 Run all commands from the repository root.
 
 ## 1. Check the prerequisites
@@ -53,6 +55,8 @@ Publishing requires 2FA or an appropriately configured granular access token.
 For an interactive release, prefer account 2FA and enter the one-time code when
 npm prompts for it. Do not store passwords, recovery codes, or npm tokens in
 this repository.
+
+For GitHub Actions, create an `npm` environment and add an `NPM_TOKEN` environment secret with publish access to `signalk-to-stalk`. Apply environment protection rules if releases require approval. The workflow grants only read access to repository contents plus the OIDC `id-token: write` permission required for npm provenance.
 
 If `npm publish` reports a permission error, ask a package owner to grant the
 npm account write access to the package. GitHub organization membership does
@@ -175,6 +179,15 @@ npm pack --dry-run
 ```
 
 ## 5. Publish the package
+
+### Preferred GitHub Actions release
+
+1. Push the release commit and matching `v<version>` tag.
+2. Create and publish a GitHub release from that tag.
+3. The **Publish to npm** workflow reruns `npm run check`, `npm test`, and `npm pack --dry-run`.
+4. The workflow verifies that the release tag equals `v` plus the version in `package.json`, then runs `npm publish --access public --provenance`.
+
+The workflow can also be started manually with an explicit `latest` or `beta` distribution tag. Manual dispatch is intended for an authorized recovery or prerelease flow; npm still rejects a version that was already published.
 
 ### First publication
 

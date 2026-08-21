@@ -55,6 +55,8 @@ If you are using a Digital Yacht SeaTalk1 to NMEA 0183 or SeaTalk to USB interfa
 
 After installation and server restart, open **Signal K to SeaTalk Monitor** from the Signal K WebApps page. The monitor is read-only and cannot send commands or modify plugin settings.
 
+The WebApps dashboard loads `./icon-72x72.png` relative to the package's `public/` directory. If an older installation still shows a blank icon after upgrading, restart Signal K and force-refresh the Admin UI so its cached WebApp metadata and image are reloaded.
+
 ## Packaging Check
 
 Before publishing a release, verify package contents:

@@ -69,6 +69,8 @@ The WebApp in `public/` consumes:
 
 The WebApp renders an indicator for every implemented SeaTalk command, including commands that are disabled or have not emitted yet. Each indicator combines its configured state with the process counter and latest observed datagram. The WebApp is deliberately read-only. Local filtering and pause controls affect only browser rendering.
 
+Signal K resolves `signalk.appIcon` relative to `public/`. Package metadata therefore points to the 72×72 PNG dashboard asset as `./icon-72x72.png`; `public/icon.svg` remains the scalable browser favicon and maskable manifest icon.
+
 ## Schema Generation
 
 The settings schema is generated from datagram metadata and explicit managed-feature schemas in `index.js`.
@@ -97,3 +99,5 @@ npm test
 ```
 
 Use focused tests for behavior changes. Add broader regression coverage when changing shared helpers, schema generation, telemetry, or manager lifecycle behavior.
+
+GitHub Actions runs the syntax checks, tests, and package dry run across the supported Node.js matrix. The release workflow repeats validation and publishes to npm only after checking that a GitHub release tag matches the package version.

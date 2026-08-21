@@ -1,5 +1,8 @@
 # signalk-to-stalk
 
+[![CI](https://github.com/OpenFairWind/signalk-to-stalk/actions/workflows/test.yml/badge.svg)](https://github.com/OpenFairWind/signalk-to-stalk/actions/workflows/test.yml)
+[![npm](https://img.shields.io/npm/v/signalk-to-stalk.svg)](https://www.npmjs.com/package/signalk-to-stalk)
+
 Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.10 is the stable release for the current architecture.
 
 The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTalk Technical Reference.
@@ -59,6 +62,8 @@ After installation and server restart, open **Signal K to SeaTalk Monitor** from
 
 The monitor shows configured features, runtime state, live outgoing datagrams, suppressions, errors, per-command counters, waypoint state, synchronized units, display-light state, and speed and heading calibration advice. It is read-only.
 
+The WebApps dashboard icon is supplied as a 72×72 PNG through Signal K's `signalk.appIcon` metadata; the scalable icon remains available to the browser manifest.
+
 ## Development
 
 ```bash
@@ -66,6 +71,8 @@ npm install
 npm run check
 npm test
 ```
+
+GitHub Actions runs these checks and verifies the npm package contents on pushes and pull requests. Publishing is handled by the npm release workflow after a GitHub release is published and its `v<version>` tag matches `package.json`. See [Publishing to npm](docs/publish-to-npm.md) for setup and release details.
 
 ## References
 

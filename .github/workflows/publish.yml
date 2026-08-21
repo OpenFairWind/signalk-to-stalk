@@ -1,0 +1,51 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      npm_tag:
+        description: npm distribution tag
+        required: true
+        default: latest
+        type: choice
+        options: [latest, beta]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          registry-url: https://registry.npmjs.org
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+      - name: Validate release
+        run: |
+          npm run check
+          npm test
+          npm pack --dry-run
+      - name: Verify release tag matches package version
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: test "$RELEASE_TAG" = "v$(node -p "require('./package.json').version")"
+      - name: Publish release
+        if: github.event_name == 'release'
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish manual run
+        if: github.event_name == 'workflow_dispatch'
+        run: npm publish --access public --provenance --tag "$NPM_TAG"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TAG: ${{ inputs.npm_tag }}

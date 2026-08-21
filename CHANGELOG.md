@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Add GitHub Actions CI across supported Node.js versions and npm publishing CD with package validation, release-tag verification, and provenance.
+
+### Fixed
+
+- Make the WebApp icon visible in the Signal K dashboard by using a packaged 72×72 PNG and a `public/`-relative `signalk.appIcon` path.
+
 ## 2.0.10 - 2026-08-21
 
 ### Added
