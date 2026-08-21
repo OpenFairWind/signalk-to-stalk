@@ -3,17 +3,17 @@
 [![CI](https://github.com/OpenFairWind/signalk-to-stalk/actions/workflows/test.yml/badge.svg)](https://github.com/OpenFairWind/signalk-to-stalk/actions/workflows/test.yml)
 [![npm](https://img.shields.io/npm/v/signalk-to-stalk.svg)](https://www.npmjs.com/package/signalk-to-stalk)
 
-Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.0.11 is the stable release for the current architecture.
+Signal K Node server plugin and read-only WebApp that converts selected Signal K navigation data to SeaTalk1 datagrams wrapped in `$STALK` NMEA 0183-style sentences. Version 2.1.0 is the stable release for the current architecture.
 
 The implementation follows Signal K SI-unit conventions and Thomas Knauf's SeaTalk Technical Reference.
 
 ## Features
 
-- Direct datagram conversions for apparent wind, position, speed/course over ground, UTC time/date, GNSS quality, and magnetic variation.
+- Direct datagram conversions for depth, apparent wind, water speed, trip/total logs, water temperature, position, speed/course over ground, UTC time/date, GNSS quality, and magnetic variation.
 - Passive target waypoint guidance using fresh, coherent mode-5 `0x85` calculations and one-time `0x82` waypoint announcements/synchronization.
 - SeaTalk display-unit synchronization using command `0x24`.
 - SeaTalk display-light synchronization using command `0x30`.
-- Read-only WebApp monitor with runtime status, counters, recent activity, and speed and heading calibration advice.
+- Read-only WebApp monitor with runtime status, counters, recent activity, speed/heading estimates, and practical wind calibration advice.
 
 ## Documentation
 
@@ -78,7 +78,7 @@ Sentences include a checksum and `CR/LF`.
 
 After installation and server restart, open **Signal K to SeaTalk Monitor** from the Signal K WebApps page.
 
-The monitor shows configured features, runtime state, live outgoing datagrams, suppressions, errors, per-command counters, waypoint state, synchronized units, display-light state, and speed and heading calibration advice. It is read-only.
+The monitor shows configured features, runtime state, live outgoing datagrams, suppressions, errors, per-command counters, waypoint state, synchronized units, display-light state, speed and heading estimates, and wind calibration guidance. It is read-only.
 
 The WebApps dashboard icon is supplied as a 72×72 PNG through Signal K's `signalk.appIcon` metadata; the scalable icon remains available to the browser manifest.
 

@@ -122,7 +122,19 @@ SeaTalk `0x24` represents speed and distance as a single unit system. If Signal 
 
 `resendOnChange: false` prevents preference changes from being sent even when periodic refresh polling is enabled. A configured periodic refresh may still resend the currently resolved system when its refresh period becomes due.
 
-Wind-speed, depth, and temperature unit controls are intentionally absent because those unit bits are embedded in measurement datagrams not implemented by this plugin.
+Measurement outputs are individually opt-in. Depth (`0x00`), water speed
+(`0x20`/`0x26`), trip and total logs (`0x21`/`0x22`/`0x25`), and water
+temperature (`0x23`/`0x27`) consume Signal K SI values and convert them at the
+SeaTalk boundary. Do not enable two representations of the same measurement
+unless the receiving instruments require both. Most importantly, do not enable
+one when its Signal K source was decoded from the same SeaTalk bus: that would
+create a feedback loop or compete with the installed talker.
+
+The encoders do not invent unavailable status. Depth alarm, transducer-failure,
+and display-unit flags are clear; high-resolution water speed marks only the
+current sensor-1 speed valid and leaves average/secondary speed unavailable.
+The ST50 `0x23` temperature form cannot represent negative Celsius values, so
+use `0x27` for cold-water inputs.
 
 ## Display Lighting
 
@@ -141,6 +153,23 @@ The plugin sends only on startup and genuine level changes, suppresses duplicate
 ## Calibration Advisor
 
 The calibration advisor is read-only. It compares `navigation.speedThroughWater` with `navigation.speedOverGround` over a rolling sample window and suggests an ST60 Speed/Tridata calibration factor.
+
+### Wind calibration advice
+
+Wind calibration is deliberately procedural rather than an automatic factor
+derived from true wind. Calculated true wind uses the same apparent-wind sensor,
+so it is not an independent reference and cannot validate that sensor.
+
+For angle alignment, secure the vessel head-to-wind in open air, let the vane
+settle, and compare port and starboard observations. Adjust the instrument's
+wind-angle offset only after repeated symmetric readings; mast twist, heel,
+upwash, sails, and nearby structures can bias a single observation.
+
+For wind speed, compare steady apparent-wind readings with a calibrated,
+independently positioned anemometer over several speeds. Apply a factor only
+when the ratio is repeatable. Do not calibrate speed from a weather station,
+forecast, or calculated true wind, and repeat checks after changes to cups,
+bearings, mast wiring, or instrument supply voltage.
 
 The displayed multiplier is:
 

@@ -16,7 +16,7 @@ Replacement settings are validated before the active runtime is stopped. Startup
 
 ## Datagram Encoders
 
-Each file in `datagrams/` exports a factory for one SeaTalk command. Direct datagram modules define:
+Each file in `datagrams/` exports a factory for one SeaTalk command. Direct datagram modules include passive depth, wind, water-speed, log, temperature, and GPS/navigation measurements and define:
 
 - `datagram`: command identifier such as `0x50`;
 - `title`: human-readable settings label;
@@ -38,6 +38,14 @@ Stateful features live in manager modules:
 - `units-manager.js` resolves Signal K display preferences or fixed settings and emits coherent `0x24` unit updates.
 - `lights-manager.js` maps Signal K or configured brightness values to SeaTalk `0x30` lamp levels.
 - `calibration-manager.js` maintains independent rolling speed and circular heading samples and publishes read-only calibration advice through telemetry.
+
+Measurement encoders accept Signal K SI values and convert only at the
+datagram boundary: metres to feet for `0x00`, metres per second to knots for
+`0x20`/`0x26`, metres to nautical miles for log frames, and kelvin to Celsius
+for temperature frames. Unsupported SeaTalk status fields are never inferred:
+`0x00` alarm/failure flags are clear and `0x26` carries only valid sensor-1
+current speed. Source selection remains an operator responsibility because a
+direct subscription cannot prove that a value did not originate on SeaTalk.
 
 Managers receive the Signal K `app`, an `emitDatagram` callback when they transmit, feature options, and telemetry.
 

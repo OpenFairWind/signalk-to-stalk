@@ -4,7 +4,7 @@
 
 The plugin is designed for installations that need to feed SeaTalk1-compatible equipment through a Signal K output path such as a STALK-capable NMEA 0183 provider, SeaTalk bridge, or adapter.
 
-Version 2.0.11 is the stable release target for the current datagram-manager architecture and read-only monitor.
+Version 2.1.0 is the stable release target for the current datagram-manager architecture and read-only monitor.
 
 ## What It Does
 
@@ -12,7 +12,8 @@ Version 2.0.11 is the stable release target for the current datagram-manager arc
 - Provides passive target waypoint guidance with SeaTalk commands `0x82` and `0x85`.
 - Optionally synchronizes SeaTalk display speed and distance units with command `0x24`.
 - Optionally synchronizes SeaTalk display lighting with command `0x30`.
-- Provides a read-only WebApp monitor with runtime status, recent activity, counters, and speed and heading calibration advice.
+- Converts opt-in depth, water-speed, log, and water-temperature measurements in addition to wind and GPS/navigation data.
+- Provides a read-only WebApp monitor with runtime status, recent activity, counters, speed/heading estimates, and practical wind calibration advice.
 
 ## Safety Boundary
 
@@ -73,6 +74,10 @@ Sentences include an NMEA checksum and `CR/LF` termination.
 3. Enable only the conversions that match available Signal K paths.
 4. Configure an output provider or bridge to consume the `stalkout` event.
 5. Open the WebApp monitor and confirm datagrams are being emitted as expected.
+
+Only enable a measurement when its Signal K source is independent of the
+SeaTalk bus receiving the generated output. Re-emitting a value decoded from
+that same bus creates a feedback loop and a competing talker.
 6. Verify behavior on the connected instruments before operational use.
 
 ## Related Documentation

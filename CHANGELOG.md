@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.1.0 - 2026-08-21
+
+### Added
+
+- Added opt-in passive measurement datagrams for depth (`0x00`), water speed
+  (`0x20` and `0x26`), trip/total logs (`0x21`, `0x22`, and `0x25`), and water
+  temperature (`0x23` and `0x27`), with SI-boundary conversion and protocol vectors.
+- Added practical, read-only wind-angle and wind-speed calibration advice to the
+  monitor and configuration guide.
+
+### Documentation
+
+- Updated the command coverage, architecture, configuration, getting-started,
+  and contributor constraints for measurement ownership and loop prevention.
+
 ## 2.0.11 - 2026-08-21
 
 ### Added

@@ -5,6 +5,11 @@ const assert = require('node:assert/strict')
 const encoder = name => require(`../datagrams/${name}`)().f
 const payload = sentence => sentence.slice(0, sentence.indexOf('*'))
 
+test('0x00 converts metres to tenths of feet without fabricating alarm flags', () => {
+  assert.equal(payload(encoder('0x00')(3.048)), '$STALK,00,02,00,64,00')
+  assert.throws(() => encoder('0x00')(-1), RangeError)
+})
+
 test('0x10 converts Signal K apparent wind angles to degrees right of bow', () => {
   const f = encoder('0x10')
   assert.equal(payload(f(0)), '$STALK,10,01,00,00')
@@ -19,6 +24,23 @@ test('0x11 converts Signal K apparent wind speed to knots and tenths', () => {
   assert.equal(payload(f(7.253668504262688)), '$STALK,11,01,0E,01')
   assert.throws(() => f(-1), RangeError)
   assert.throws(() => f(100), RangeError)
+})
+
+test('0x20 and 0x26 encode standard and high-resolution water speed', () => {
+  assert.equal(payload(encoder('0x20')(10)), '$STALK,20,01,C2,00')
+  assert.equal(payload(encoder('0x26')(10)), '$STALK,26,04,98,07,00,00,40')
+})
+
+test('0x21, 0x22, and 0x25 encode Signal K metre logs as nautical miles', () => {
+  assert.equal(payload(encoder('0x21')(1852 * 12.34)), '$STALK,21,02,D2,04,00')
+  assert.equal(payload(encoder('0x22')(1852 * 123.4)), '$STALK,22,02,D2,04,00')
+  assert.equal(payload(encoder('0x25')(1852 * 123.4, 1852 * 12.34)), '$STALK,25,04,D2,04,D2,04,00')
+})
+
+test('0x23 and 0x27 convert Signal K kelvin water temperature', () => {
+  assert.equal(payload(encoder('0x23')(293.15)), '$STALK,23,01,14,44')
+  assert.equal(payload(encoder('0x27')(293.15)), '$STALK,27,01,2C,01')
+  assert.throws(() => encoder('0x23')(263.15), RangeError)
 })
 
 test('0x50 encodes latitude with South flag', () => {
@@ -77,6 +99,8 @@ test('0x99 converts Signal K east-positive variation to SeaTalk west-positive wh
 test('encoders ignore unavailable values and reject malformed values', () => {
   assert.equal(encoder('0x10')(null), undefined)
   assert.equal(encoder('0x11')(null), undefined)
+  assert.equal(encoder('0x00')(null), undefined)
+  assert.equal(encoder('0x25')(null, 10), undefined)
   assert.equal(encoder('0x50')(null), undefined)
   assert.equal(encoder('0x57')(null, 0.7), undefined)
   assert.equal(encoder('0x99')(null), undefined)

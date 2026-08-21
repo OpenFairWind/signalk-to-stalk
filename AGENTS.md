@@ -9,6 +9,7 @@ These constraints apply to coding agents working in this repository.
 - Treat waypoint guidance as passive. Do not add autopilot engagement, steering, key-command, or waypoint-advance acknowledgement behavior.
 - Keep the bundled WebApp read-only. Browser controls may filter or pause display updates, but must not write plugin settings or transmit arbitrary SeaTalk data.
 - Keep Signal K values in SI units internally. Convert only at the SeaTalk datagram boundary.
+- Measurement datagrams must be opt-in. Never enable or recommend retransmission when the selected Signal K value originated on the same SeaTalk bus.
 
 ## Implementation Constraints
 
@@ -20,6 +21,8 @@ These constraints apply to coding agents working in this repository.
 - Validate a replacement configuration before stopping a running instance, and clean up every partial subscription, manager, interval, or timeout when startup fails.
 - For rate-limited or trailing emissions, ensure the eventual output reflects the latest accepted source value; cancel obsolete pending work on reversion, replacement, and stop.
 - Make boolean feature controls and manager options exact: disabled change detection must not emit changes indirectly through another polling or refresh option.
+- Do not synthesize SeaTalk alarm, sensor-failure, unit, validity, average, or secondary-sensor state from a bare Signal K measurement. Clear unsupported flags or suppress the datagram, and document the choice.
+- Calibration features are advisory and read-only. Wind advice must require an independent reference or a documented physical procedure; never present derived true wind as an independent calibration reference.
 
 ## Documentation Constraints
 
@@ -34,6 +37,7 @@ These constraints apply to coding agents working in this repository.
 - Run `npm run check` and `npm test` before committing code changes.
 - Run `npm pack --dry-run` for every release-facing change and whenever package metadata, WebApp assets, workflows, or publish contents change.
 - Add or update tests for encoder vectors, manager lifecycle behavior, settings-schema changes, telemetry output, and WebApp read-only guarantees.
+- For measurement encoders, test SI conversion, byte boundaries, null suppression, malformed input, field overflow, and every flag intentionally set or cleared.
 - Cover failed and repeated starts, unsubscribe failures, pending-timer replacement/cancellation, and conflicting manager options when those paths change.
 - Keep `.github/workflows/test.yml` aligned with the locally required checks and supported Node.js versions.
 - Do not bypass or weaken CI checks to make a change pass.
