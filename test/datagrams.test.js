@@ -74,6 +74,15 @@ test('0x53 applies magnetic variation and normalizes negative angles', () => {
   assert.equal(payload(result), '$STALK,53,30,28')
 })
 
+test('0x53 suppresses nullish inputs and resumes with valid values', () => {
+  const f = encoder('0x53')
+  assert.equal(f(null, 0), undefined)
+  assert.equal(f(0, null), undefined)
+  assert.equal(payload(f(0, 0)), '$STALK,53,00,00')
+  assert.throws(() => f(NaN, 0), TypeError)
+  assert.throws(() => f(0, '0'), TypeError)
+})
+
 test('0x54 packs UTC time according to Knauf command 54', () => {
   assert.equal(payload(encoder('0x54')('2026-07-19T12:34:56Z')), '$STALK,54,81,8B,0C')
 })

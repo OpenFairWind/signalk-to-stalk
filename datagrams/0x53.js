@@ -6,7 +6,7 @@ module.exports = () => ({
   keys: ['navigation.courseOverGroundTrue', 'navigation.magneticVariation'],
   defaults: [undefined, 0],
   f(courseTrue, variation = 0) {
-    if (courseTrue == null) return undefined
+    if (courseTrue == null || variation == null) return undefined
     assertFinite(courseTrue, 'courseOverGroundTrue')
     assertFinite(variation, 'magneticVariation')
     const magnetic = normalizeDegrees(radiansToDegrees(courseTrue - variation))
