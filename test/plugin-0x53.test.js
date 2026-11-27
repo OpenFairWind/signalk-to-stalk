@@ -29,18 +29,26 @@ test('0x53 suppresses a null variation without reporting an error and resumes ou
 
   const course = streams.get('navigation.courseOverGroundTrue')
   const variation = streams.get('navigation.magneticVariation')
+  const sentences = () => emitted.filter(([event]) => event === 'stalkout:53').map(([, sentence]) => sentence.trimEnd())
+
   course.push(0)
   variation.push(0)
   await settle()
-  assert.equal(emitted.filter(([event]) => event === 'stalkout:53').length, 1)
+  // Updates within the 20 ms coalescing window may produce a leading and a
+  // trailing sentence; only the latest output is significant.
+  const established = sentences().length
+  assert.ok(established >= 1)
+  assert.match(sentences().at(-1), /^\$STALK,53,00,00\*/)
 
   variation.push(null)
   await settle()
-  assert.equal(emitted.filter(([event]) => event === 'stalkout:53').length, 1)
+  assert.equal(sentences().length, established)
   assert.deepEqual(errors, [])
 
   variation.push(10 * Math.PI / 180)
   await settle()
-  assert.equal(emitted.filter(([event]) => event === 'stalkout:53').length, 2)
+  assert.equal(sentences().length, established + 1)
+  // 0 deg true with 10 deg east variation is 350 deg magnetic.
+  assert.match(sentences().at(-1), /^\$STALK,53,30,28\*/)
   assert.deepEqual(errors, [])
 })
