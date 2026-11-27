@@ -52,3 +52,36 @@ test('0x53 suppresses a null variation without reporting an error and resumes ou
   assert.match(sentences().at(-1), /^\$STALK,53,30,28\*/)
   assert.deepEqual(errors, [])
 })
+
+test('0x53 sends nothing until magnetic variation is available', async t => {
+  const streams = new Map()
+  const emitted = []
+  const errors = []
+  const app = {
+    streambundle: {
+      getSelfStream(path) {
+        if (!streams.has(path)) streams.set(path, new Bacon.Bus())
+        return streams.get(path)
+      }
+    },
+    emit(event, sentence) { emitted.push([event, sentence]) },
+    debug() {},
+    error(message) { errors.push(message) },
+    setPluginStatus() {},
+    setPluginError(message) { errors.push(message) }
+  }
+  const plugin = createPlugin(app)
+  t.after(() => plugin.stop())
+  plugin.start({ '0x53': true })
+
+  streams.get('navigation.courseOverGroundTrue').push(0)
+  await settle()
+  assert.deepEqual(emitted, [])
+
+  streams.get('navigation.magneticVariation').push(10 * Math.PI / 180)
+  await settle()
+  const sentences = emitted.filter(([event]) => event === 'stalkout:53').map(([, sentence]) => sentence.trimEnd())
+  assert.equal(sentences.length, 1)
+  assert.match(sentences[0], /^\$STALK,53,30,28\*/)
+  assert.deepEqual(errors, [])
+})

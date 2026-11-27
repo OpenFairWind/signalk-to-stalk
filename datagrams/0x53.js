@@ -4,8 +4,9 @@ module.exports = () => ({
   datagram: '0x53',
   title: '0x53 Magnetic course over ground',
   keys: ['navigation.courseOverGroundTrue', 'navigation.magneticVariation'],
-  defaults: [undefined, 0],
-  f(courseTrue, variation = 0) {
+  // No default variation: assuming 0 would falsely claim true and magnetic
+  // course are equal. 0x53 waits until both values are available.
+  f(courseTrue, variation) {
     if (courseTrue == null || variation == null) return undefined
     assertFinite(courseTrue, 'courseOverGroundTrue')
     assertFinite(variation, 'magneticVariation')

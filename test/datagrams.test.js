@@ -78,6 +78,8 @@ test('0x53 suppresses nullish inputs and resumes with valid values', () => {
   const f = encoder('0x53')
   assert.equal(f(null, 0), undefined)
   assert.equal(f(0, null), undefined)
+  assert.equal(f(0), undefined)
+  assert.equal(f(0, undefined), undefined)
   assert.equal(payload(f(0, 0)), '$STALK,53,00,00')
   assert.throws(() => f(NaN, 0), TypeError)
   assert.throws(() => f(0, '0'), TypeError)

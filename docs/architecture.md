@@ -23,7 +23,7 @@ Each file in `datagrams/` exports a factory for one SeaTalk command. Direct data
 - `datagram`: command identifier such as `0x50`;
 - `title`: human-readable settings label;
 - `keys`: Signal K stream paths used by the encoder;
-- optional defaults;
+- optional `defaults` (an initial value per key; no current encoder uses one, because a fabricated default would misrepresent missing Signal K data);
 - `f(...)`: encoder function returning a complete `$STALK` sentence or `undefined`.
 
 Managed datagrams, such as `0x24`, `0x30`, `0x82`, and `0x85`, are used by manager modules instead of being exposed as simple direct subscriptions.

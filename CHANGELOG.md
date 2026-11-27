@@ -28,6 +28,9 @@
   `null` (for example during Signal K startup or source changes) instead of
   repeatedly reporting an encoding error; output resumes with the next valid
   value. Contributed by [haipule](https://github.com/haipule) in PR #3.
+- `0x53` no longer assumes zero magnetic variation before the first
+  `navigation.magneticVariation` value arrives. It now waits for both course
+  and variation, so true course is never presented as magnetic course.
 
 ### CI/CD
 
