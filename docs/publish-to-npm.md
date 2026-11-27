@@ -106,6 +106,7 @@ Run the required project checks:
 ```bash
 npm run check
 npm test
+npm run verify:package
 ```
 
 Inspect the files that npm would publish:
@@ -175,6 +176,7 @@ Run the validation commands again after the version change:
 ```bash
 npm run check
 npm test
+npm run verify:package
 npm pack --dry-run
 ```
 
@@ -184,8 +186,8 @@ npm pack --dry-run
 
 1. Push the release commit and matching `v<version>` tag.
 2. Create and publish a GitHub release from that tag.
-3. The **Publish to npm** workflow reruns `npm run check`, `npm test`, and `npm pack --dry-run`.
-4. The workflow verifies that the release tag equals `v` plus the version in `package.json`, then runs `npm publish --access public --provenance`.
+3. The **Publish to npm** workflow reruns `npm run check`, `npm test`, `npm run verify:package`, and `npm pack --dry-run`.
+4. The workflow verifies that the release tag equals `v` plus the version in `package.json` (`node scripts/verify-package.js --tag <tag>`), refuses to continue if that version already exists on npm, then runs `npm publish --access public --provenance`.
 
 The workflow can also be started manually with an explicit `latest` or `beta` distribution tag. Manual dispatch is intended for an authorized recovery or prerelease flow; npm still rejects a version that was already published.
 
@@ -281,7 +283,7 @@ Published npm versions are immutable. To correct code or metadata:
 
 1. Fix the problem in the repository.
 2. Add a changelog entry.
-3. Run `npm run check`, `npm test`, and `npm pack --dry-run`.
+3. Run `npm run check`, `npm test`, `npm run verify:package`, and `npm pack --dry-run`.
 4. Increment the version, normally with `npm version patch`.
 5. Publish the new version.
 
@@ -307,6 +309,7 @@ serious accidental publication after reviewing npm's current
 - [ ] The version does not already exist on npm.
 - [ ] `npm run check` succeeds.
 - [ ] `npm test` succeeds.
+- [ ] `npm run verify:package` succeeds.
 - [ ] `npm pack --dry-run` contains only intended files.
 - [ ] The package is published with the correct npm distribution tag.
 - [ ] The published metadata and archive are verified.

@@ -1,5 +1,42 @@
 # Changelog
 
+## 2.1.1 - 2026-11-26
+
+### Fixed
+
+- Corrected the SeaTalk1 `0x85` nibble order for cross-track error and distance
+  to waypoint. Knauf splits each 12-bit field into a low nibble (`X`, `Z`)
+  followed by the high byte (`XX`, `ZZ`); earlier releases sent the high nibble
+  first, so instruments could display wrong XTE and distance values. Encoder
+  vectors now include Knauf's worked examples.
+- Direct datagrams no longer drop the latest value of a burst. The former
+  leading-edge 20 ms debounce discarded trailing updates (for example the
+  second path of a `0x25` delta). A leading-and-trailing latest-value gate now
+  coalesces bursts and also implements each `<datagram>_throttle` interval;
+  `stop()` cancels pending trailing output.
+- Display lights no longer debounce Signal K changes before the manager's own
+  rate limiter, so rapid brightness changes always end on the latest level.
+- Display units with the Signal K preferences source now ignore the stored
+  `speedAndDistance` value (the admin UI saves its `nautical` default), which
+  previously disabled preference resolution entirely.
+- With `resendOnChange` disabled, periodic unit refresh repeats the system that
+  was already sent instead of indirectly publishing a changed preference. The
+  fixed-configuration source no longer starts a preference-polling timer.
+- Waypoint guidance validates the rounded 12-bit XTE and distance fields and
+  suppresses unencodable frames instead of throwing from a timer or stream.
+
+### CI/CD
+
+- CI adds Node.js 26, concurrency cancellation, job timeouts, package-metadata
+  verification, a production dependency audit, and a packaged tarball artifact
+  with a development-file guard.
+- Publishing reuses the package verifier for the release tag and refuses to
+  republish an existing npm version.
+- Added Dependabot for GitHub Actions and npm dependencies.
+- `npm run check` now also syntax-checks `navigation-geometry.js`; the new
+  `npm run verify:package` keeps package metadata, icon, changelog, and syntax
+  checks consistent.
+
 ## 2.1.0 - 2026-08-21
 
 ### Added

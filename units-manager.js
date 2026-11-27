@@ -6,6 +6,8 @@ const DISTANCE_PATHS = ['navigation.log', 'navigation.trip.log']
 module.exports = function createUnitsManager(app, emitDatagram, encoder, options = {}, telemetry) {
   let timer
   let lastSystem
+  let lastSentAt
+  const now = typeof options.now === 'function' ? options.now : Date.now
 
   const settings = {
     source: options.source || 'signalKPreferences',
@@ -16,35 +18,54 @@ module.exports = function createUnitsManager(app, emitDatagram, encoder, options
     resendOnChange: options.resendOnChange !== false
   }
 
+  // Change detection only applies to Signal K preferences; a fixed setting
+  // cannot change while the plugin runs.
+  const detectsChanges = settings.resendOnChange && settings.source !== 'configuration'
+
   function start() {
     if (settings.sendOnStartup) evaluate(true)
-    if (settings.resendOnChange || settings.periodicRefreshSeconds > 0) {
-      timer = setInterval(() => evaluate(false), Math.max(1000, settings.pollIntervalMs))
+    const intervalMs = timerIntervalMs()
+    if (intervalMs) {
+      timer = setInterval(() => evaluate(false), intervalMs)
       if (typeof timer.unref === 'function') timer.unref()
     }
+  }
+
+  function timerIntervalMs() {
+    const refreshMs = settings.periodicRefreshSeconds > 0 ? settings.periodicRefreshSeconds * 1000 : 0
+    const candidates = []
+    if (detectsChanges) candidates.push(settings.pollIntervalMs)
+    if (refreshMs) candidates.push(refreshMs)
+    return candidates.length ? Math.max(1000, Math.min(...candidates)) : 0
   }
 
   function stop() {
     if (timer) clearInterval(timer)
     timer = undefined
     lastSystem = undefined
+    lastSentAt = undefined
   }
 
   function evaluate(force) {
     try {
-      const system = resolveUnitSystem(app, settings)
+      const refreshMs = settings.periodicRefreshSeconds > 0 ? settings.periodicRefreshSeconds * 1000 : 0
+      const refreshDue = refreshMs > 0 && (lastSentAt === undefined || now() - lastSentAt >= refreshMs)
+      // With change detection disabled, a periodic refresh repeats the system
+      // already sent instead of indirectly publishing a newly resolved one.
+      const system = !force && !detectsChanges && lastSystem !== undefined
+        ? lastSystem
+        : resolveUnitSystem(app, settings)
       if (!system) {
         app.debug('No coherent SeaTalk speed/distance unit preference could be resolved')
         return
       }
-      const refreshMs = settings.periodicRefreshSeconds > 0 ? settings.periodicRefreshSeconds * 1000 : 0
-      const refreshDue = refreshMs > 0 && (!evaluate.lastSentAt || Date.now() - evaluate.lastSentAt >= refreshMs)
       const changed = system !== lastSystem
-      if (force || (settings.resendOnChange && changed) || refreshDue) {
-        emitDatagram('0x24', encoder.f(system), { reason: force ? 'unit-startup' : (changed ? 'unit-change' : 'unit-refresh'), unitSystem: system })
+      if (force || (detectsChanges && changed) || refreshDue) {
+        const reason = force ? 'unit-startup' : (detectsChanges && changed ? 'unit-change' : 'unit-refresh')
+        emitDatagram('0x24', encoder.f(system), { reason, unitSystem: system })
         lastSystem = system
-        evaluate.lastSentAt = Date.now()
-        telemetry?.setUnits({ system, lastSentAt: evaluate.lastSentAt, source: settings.source })
+        lastSentAt = now()
+        telemetry?.setUnits({ system, lastSentAt, source: settings.source })
       }
     } catch (error) {
       const message = `Failed to synchronize SeaTalk units: ${error.message}`
@@ -54,7 +75,7 @@ module.exports = function createUnitsManager(app, emitDatagram, encoder, options
     }
   }
 
-  return { start, stop, evaluate }
+  return { start, stop, evaluate, timerIntervalMs }
 }
 
 function resolveUnitSystem(app, settings) {
@@ -63,7 +84,9 @@ function resolveUnitSystem(app, settings) {
       ? 'nautical'
       : normalizeExplicit(settings.speedAndDistance)
   }
-  if (settings.speedAndDistance !== 'auto') return normalizeExplicit(settings.speedAndDistance)
+  // speedAndDistance is used only by the fixed source. The Signal K admin UI
+  // stores the schema default ('nautical') even when preferences are selected,
+  // so honouring it here would silently disable preference resolution.
 
   const preferences = getPreferences(app)
   const speed = firstUnit([

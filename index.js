@@ -99,7 +99,7 @@ module.exports = function createPlugin(app) {
       return stream
     })
 
-    let stream = Bacon.combineWith((...values) => {
+    const stream = Bacon.combineWith((...values) => {
       try {
         return encoder.f(...values)
       } catch (error) {
@@ -109,11 +109,19 @@ module.exports = function createPlugin(app) {
         if (typeof app.setPluginError === 'function') app.setPluginError(message)
         return undefined
       }
-    }, streams).filter(value => value !== undefined).changes().debounceImmediate(20)
+    }, streams).filter(value => value !== undefined).changes()
 
-    if (Number.isFinite(throttleMs) && throttleMs > 0) stream = stream.throttle(throttleMs)
-    const unsubscribe = stream.onValue(sentence => emitDatagram(encoder.datagram, sentence))
-    plugin.unsubscribes.push(unsubscribe)
+    const intervalMs = Math.max(COALESCE_MS, Number.isFinite(throttleMs) && throttleMs > 0 ? throttleMs : 0)
+    const gate = createLatestValueGate(intervalMs, sentence => emitDatagram(encoder.datagram, sentence), error => {
+      const message = `Failed to emit ${encoder.datagram}: ${error.message}`
+      app.error(error.stack ? `${message}\n${error.stack}` : message)
+      plugin.telemetry.record({ type: 'error', datagram: encoder.datagram, message })
+    })
+    const unsubscribeStream = stream.onValue(sentence => gate.push(sentence))
+    plugin.unsubscribes.push(() => {
+      gate.cancel()
+      unsubscribeStream()
+    })
   }
 
   function emitDatagram(datagram, sentence, details = {}) {
@@ -349,6 +357,54 @@ function sentenceBytes(sentence) {
 
 const getThrottleProperty = key => `${key}_throttle`
 
+// Updates arriving within this window (for example several paths from one
+// Signal K delta) are coalesced into a single trailing emission.
+const COALESCE_MS = 20
+
+// Leading-and-trailing rate limiter. The first value after an idle interval is
+// delivered immediately; later values inside the interval replace one pending
+// value that is delivered when the interval ends, so the final output always
+// reflects the latest accepted source value. cancel() discards pending work.
+function createLatestValueGate(intervalMs, deliver, onError = () => {}, clock = {}) {
+  const now = clock.now || Date.now
+  const schedule = clock.setTimeout || setTimeout
+  const unschedule = clock.clearTimeout || clearTimeout
+  let lastDeliveredAt
+  let pending
+  let timer
+
+  function safeDeliver(value) {
+    lastDeliveredAt = now()
+    try { deliver(value) } catch (error) { onError(error) }
+  }
+
+  function flush() {
+    timer = undefined
+    if (!pending) return
+    const { value } = pending
+    pending = undefined
+    safeDeliver(value)
+  }
+
+  return {
+    push(value) {
+      const elapsed = lastDeliveredAt === undefined ? Infinity : now() - lastDeliveredAt
+      if (!timer && elapsed >= intervalMs) {
+        safeDeliver(value)
+        return
+      }
+      pending = { value }
+      if (!timer) timer = schedule(flush, Math.max(0, intervalMs - elapsed))
+    },
+    cancel() {
+      if (timer) unschedule(timer)
+      timer = undefined
+      pending = undefined
+    },
+    hasPending: () => pending !== undefined
+  }
+}
+
 
 function configurationSummary(options, datagrams) {
   const direct = Object.keys(datagrams).filter(key => !datagrams[key].managed).map(key => ({
@@ -457,4 +513,5 @@ function validateSchemaValue(value, definition, label) {
 }
 
 module.exports.configurationSummary = configurationSummary
+module.exports.createLatestValueGate = createLatestValueGate
 module.exports.validateCurrentConfiguration = validateCurrentConfiguration

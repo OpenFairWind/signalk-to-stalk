@@ -60,7 +60,7 @@ inaccurate.
 | `0x82` | Target waypoint name | Implemented | Managed as a passive four-character target announcement with duplicate suppression. |
 | `0x83` | Course-computer failure/status | Device-owned | The plugin cannot truthfully report drive or auto-release status for a course computer. |
 | `0x84` | Heading, autopilot course/mode, alarms and rudder | Device-owned | A composite authoritative autopilot state frame must come from the course computer; synthesizing it risks conflicts and false mode/alarm state. |
-| `0x85` | Navigation to waypoint | Implemented | Managed as fresh, coherent, range-checked passive mode-5 guidance; it never engages Track mode or acknowledges an advance. |
+| `0x85` | Navigation to waypoint | Implemented | Managed as fresh, coherent, range-checked passive mode-5 guidance; it never engages Track mode or acknowledges an advance. XTE and distance use Knauf's low-nibble-first field split (corrected in 2.1.1). |
 | `0x86` | Autopilot keystroke | Safety boundary | Steering, mode, tack, and setup key commands are explicitly prohibited. |
 | `0x87` | Set autopilot response level | Safety boundary | Changes steering behavior and requires deliberate helm control. |
 | `0x88` | Autopilot calibration parameter report | Device-owned | Parameter state must be reported by the actual course computer, not inferred or impersonated. |

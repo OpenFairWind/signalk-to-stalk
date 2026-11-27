@@ -12,6 +12,8 @@
 - emits generated sentences on `stalkout` and per-command events;
 - registers read-only WebApp API routes.
 
+Each direct subscription combines its Signal K streams, encodes every combined value, and passes the sentence to a leading-and-trailing latest-value gate (`createLatestValueGate`). The gate interval is the configured `<datagram>_throttle` or a 20 ms coalescing window, whichever is longer. It emits the first value immediately and keeps only the latest pending value for the trailing edge; the subscription's unsubscribe callback cancels pending trailing work on stop, restart, or failed startup.
+
 Replacement settings are validated before the active runtime is stopped. Startup is transactional with respect to subscriptions and managers: if setup throws after partial initialization, `stop()` removes the partial resources and leaves a stopped runtime instead of a mixed configuration.
 
 ## Datagram Encoders
@@ -110,4 +112,6 @@ npm test
 
 Use focused tests for behavior changes. Add broader regression coverage when changing shared helpers, schema generation, telemetry, or manager lifecycle behavior.
 
-GitHub Actions runs the syntax checks, tests, and package dry run across the supported Node.js matrix. The release workflow repeats validation and publishes to npm only after checking that a GitHub release tag matches the package version.
+GitHub Actions (`.github/workflows/test.yml`) runs `npm run check`, `npm test`, `npm run verify:package`, and `npm pack --dry-run` on every push and pull request across Node.js 18, 20, 22, 24, and 26. A follow-up job audits production dependencies, builds the npm tarball, rejects development files in it, and uploads it as a workflow artifact. `scripts/verify-package.js` checks repository metadata, the `files` whitelist, the `signalk.appIcon` raster size, the CHANGELOG entry for the current version, syntax-check coverage of root modules, and (for releases) the tag.
+
+The release workflow (`.github/workflows/publish.yml`) repeats validation, verifies that a GitHub release tag equals `v<package.json version>`, refuses to republish an existing npm version, and publishes with provenance using the `NPM_TOKEN` secret. Dependabot proposes monthly GitHub Actions and npm updates.
