@@ -31,6 +31,13 @@ decimal place. Values outside the representable SeaTalk range are rejected.
 `navigation.gnss.horizontalDilution`. The satellite count is limited to the
 four-bit SeaTalk field and HDOP is encoded in tenths.
 
+`0x53` requires both `navigation.courseOverGroundTrue` and
+`navigation.magneticVariation`. It is not sent until a variation value has been
+received, and it is suppressed while either value is `null`; zero variation is
+never assumed, because that would present true course as magnetic course.
+Output resumes automatically with the next valid pair. Provide variation from a
+trustworthy source (for example a GPS or WMM plugin) when enabling `0x53`.
+
 `0x99` converts Signal K's east-positive magnetic variation in radians to
 SeaTalk's west-positive signed whole degrees. It therefore depends on a
 selected, trustworthy `navigation.magneticVariation` source.

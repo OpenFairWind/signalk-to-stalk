@@ -24,6 +24,13 @@
   fixed-configuration source no longer starts a preference-polling timer.
 - Waypoint guidance validates the rounded 12-bit XTE and distance fields and
   suppresses unencodable frames instead of throwing from a timer or stream.
+- `0x53` is suppressed while true course or magnetic variation is an explicit
+  `null` (for example during Signal K startup or source changes) instead of
+  repeatedly reporting an encoding error; output resumes with the next valid
+  value. Contributed by [haipule](https://github.com/haipule) in PR #3.
+- `0x53` no longer assumes zero magnetic variation before the first
+  `navigation.magneticVariation` value arrives. It now waits for both course
+  and variation, so true course is never presented as magnetic course.
 
 ### CI/CD
 
