@@ -35,7 +35,8 @@ module.exports = function createLightsManager(app, emitDatagram, encoder, option
     if (settings.resendOnChange && app.streambundle?.getSelfStream) {
       let stream = app.streambundle.getSelfStream(settings.signalKPath)
       if (typeof stream.changes === 'function') stream = stream.changes()
-      if (typeof stream.debounceImmediate === 'function') stream = stream.debounceImmediate(20)
+      // No debounce here: rate limiting is handled by processValue, whose
+      // trailing timer always delivers the latest accepted level.
       if (typeof stream.onValue === 'function') unsubscribe = stream.onValue(value => processValue(value, 'lights-change'))
     }
   }

@@ -8,22 +8,25 @@ function encodeNavigation({ crossTrackError, bearing, distance, bearingTrue = fa
     throw new TypeError('crossTrackError, bearing, and distance are required for a valid 0x85 datagram')
   }
   let xte = 0
-  let xteLow = 0
+  let xteHigh = 0
   let bearingVU = 0
   let rangeZW = 0
-  let rangeLow = 0
   let y = 0
-  // Mode 5 displays XTE, range, and bearing without requesting autopilot track control.
+  // Knauf F=0x5 displays XTE, distance, and bearing without entering Track
+  // Control Mode (F=0x3/0x7/0xF lock the autopilot on to GPS and are never sent).
   const trackControlMode = 0x05
 
   {
     const xteHundredthsNm = Math.round(Math.abs(crossTrackError) / METRES_PER_NAUTICAL_MILE * 100)
     if (xteHundredthsNm > 0x0fff) throw new RangeError('crossTrackError exceeds the SeaTalk field capacity')
-    xte = (xteHundredthsNm >> 8) & 0x0f
-    xteLow = xteHundredthsNm & 0xff
+    // Knauf: XXX is split as the X nibble (least-significant 4 bits) followed
+    // by the XX byte (most-significant 8 bits): 0x105 => X6 XX = 56 10.
+    xte = xteHundredthsNm & 0x0f
+    xteHigh = (xteHundredthsNm >> 4) & 0xff
     if (crossTrackError < 0) y |= 0x04
   }
 
+  let rangeNibble = 0
   let rangeHigh = 0
   let bearingW = 0
   {
@@ -48,13 +51,15 @@ function encodeNavigation({ crossTrackError, bearing, distance, bearingTrue = fa
       encoded = Math.round(nauticalMiles * 10)
     }
     if (encoded > 0x0fff) throw new RangeError('distance exceeds the SeaTalk field capacity')
-    rangeHigh = (encoded >> 8) & 0x0f
-    rangeLow = encoded & 0xff
+    // Knauf: ZZZ is split as the Z nibble of ZW (least-significant 4 bits)
+    // followed by the ZZ byte (most-significant 8 bits): 0x201 => ZW ZZ = 1W 20.
+    rangeNibble = encoded & 0x0f
+    rangeHigh = (encoded >> 4) & 0xff
   }
 
-  rangeZW = (rangeHigh << 4) | bearingW
+  rangeZW = (rangeNibble << 4) | bearingW
   const yf = (y << 4) | trackControlMode
-  return [0x85, (xte << 4) | 0x06, xteLow, bearingVU, rangeZW, rangeLow, yf, 0x00, 0xff - yf]
+  return [0x85, (xte << 4) | 0x06, xteHigh, bearingVU, rangeZW, rangeHigh, yf, 0x00, 0xff - yf]
 }
 
 module.exports = () => ({

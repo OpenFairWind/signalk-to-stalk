@@ -1,29 +1,71 @@
 name: CI
+
 on:
   push:
     branches: ['**']
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Node.js ${{ matrix.node-version }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18.x, 20.x, 22.x, 24.x]
+        # Keep aligned with package.json engines (>=18) and current Node.js lines.
+        node-version: [18.x, 20.x, 22.x, 24.x, 26.x]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: npm install --ignore-scripts --no-audit --no-fund
       - name: Check JavaScript syntax
         run: npm run check
       - name: Run tests
         run: npm test
+      - name: Verify package metadata
+        run: npm run verify:package
       - name: Verify npm package contents
         run: npm pack --dry-run
+
+  package:
+    name: Package artifact
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Build npm tarball
+        run: |
+          mkdir -p dist
+          npm pack --pack-destination dist
+          tar -tzf dist/*.tgz | sort > dist/contents.txt
+          if grep -E '^package/(test|scripts|\.github|\.idea)/' dist/contents.txt; then
+            echo 'Unexpected development files in package' >&2
+            exit 1
+          fi
+      - name: Upload npm tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: signalk-to-stalk-${{ github.sha }}
+          path: dist/
+          retention-days: 14

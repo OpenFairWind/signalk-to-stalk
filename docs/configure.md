@@ -19,7 +19,7 @@ Each direct conversion can be enabled independently:
 - `0x57` GNSS satellite count and horizontal dilution of precision;
 - `0x99` compass variation.
 
-Each direct conversion also has a minimum output interval in milliseconds. Set the interval to `0` to emit every accepted value change.
+Each direct conversion also has a minimum output interval (`<datagram>_throttle`) in milliseconds. Output is rate-limited on both edges: the first value after an idle interval is sent immediately, and any later values received inside the interval are reduced to the latest one, which is sent when the interval ends. The final output therefore always reflects the most recent accepted Signal K value. Set the interval to `0` to emit every accepted value change; updates arriving within 20 ms of each other (for example several paths carried by one Signal K delta) are still coalesced into one trailing sentence that uses all of the latest values. Stopping or reconfiguring the plugin cancels any pending trailing sentence.
 
 Enable `0x10` and `0x11` together for apparent wind. Signal K apparent wind
 angle is expressed in radians with negative values to port; SeaTalk `0x10`
@@ -76,7 +76,9 @@ When the target is cleared, periodic navigation output stops. No invalid `0x85` 
 
 In magnetic mode, if only true bearing and magnetic variation are available, the magnetic bearing is derived. If variation is unavailable, the true bearing is transmitted with the SeaTalk true-bearing flag instead of suppressing all waypoint guidance.
 
-Navigation frames are rate-limited to the configured refresh interval. Invalid or out-of-range distance and cross-track values are suppressed so they cannot be interpreted as alarm-like data by connected instruments.
+Navigation frames are rate-limited to the configured refresh interval. Invalid or out-of-range distance and cross-track values are suppressed so they cannot be interpreted as alarm-like data by connected instruments. The range check uses the rounded values that would be transmitted: distance must fit 409.5 nm (12-bit tenths) and XTE 40.95 nm (12-bit hundredths). Out-of-range values report `distance-out-of-range` or `cross-track-error-out-of-range`; any other encoder rejection reports `navigation-encoding-failed`.
+
+`0x85` follows Thomas Knauf's layout `85 X6 XX VU ZW ZZ YF 00 yf`. The 12-bit XTE and distance fields are each split into a low nibble (`X`, high nibble of `ZW`) followed by the high byte (`XX`, `ZZ`); for example XTE 2.61 nm (`0x105`) is `56 10`. Releases before 2.1.1 sent these nibbles in the wrong order. `F` is always `5` (display XTE, distance, and bearing without Track Control Mode).
 
 ### Stale Data
 
@@ -108,7 +110,9 @@ Example:
 }
 ```
 
-With `source` set to `signalKPreferences`, the plugin checks Signal K unit preferences and falls back to `displayUnits` metadata for representative speed and log paths.
+With `source` set to `signalKPreferences`, the plugin checks Signal K unit preferences and falls back to `displayUnits` metadata for representative speed and log paths. In this mode `speedAndDistance` is ignored: the Signal K admin UI stores its `nautical` default even when preferences are selected, so it must not override the resolved preference. `pollIntervalMs` is likewise used only by this source.
+
+With `source` set to `configuration`, `speedAndDistance` is required and is the only input. A fixed setting cannot change while the plugin runs, so `resendOnChange` and `pollIntervalMs` have no effect; only `sendOnStartup` and `periodicRefreshSeconds` schedule output.
 
 Supported coherent combinations:
 
@@ -120,7 +124,7 @@ Supported coherent combinations:
 
 SeaTalk `0x24` represents speed and distance as a single unit system. If Signal K specifies a mixed combination, such as knots with kilometres, the plugin logs the conflict and suppresses the command.
 
-`resendOnChange: false` prevents preference changes from being sent even when periodic refresh polling is enabled. A configured periodic refresh may still resend the currently resolved system when its refresh period becomes due.
+`resendOnChange: false` prevents preference changes from being sent, including indirectly through periodic refresh: once a system has been sent, a due refresh repeats that same system rather than a newly resolved one. If nothing has been sent yet (`sendOnStartup: false`), the first refresh sends the currently resolved system. The timer runs at the shorter of `pollIntervalMs` (only when change detection applies) and `periodicRefreshSeconds`, never faster than once per second; with change detection and refresh both disabled no timer is started. Changing any of these settings restarts the plugin and resets the last-sent state.
 
 Measurement outputs are individually opt-in. Depth (`0x00`), water speed
 (`0x20`/`0x26`), trip and total logs (`0x21`/`0x22`/`0x25`), and water

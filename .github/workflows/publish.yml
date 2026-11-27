@@ -16,9 +16,14 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: npm
     steps:
       - uses: actions/checkout@v4
@@ -27,17 +32,25 @@ jobs:
           node-version: 22.x
           registry-url: https://registry.npmjs.org
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: npm install --ignore-scripts --no-audit --no-fund
       - name: Validate release
         run: |
           npm run check
           npm test
+          npm run verify:package
           npm pack --dry-run
       - name: Verify release tag matches package version
         if: github.event_name == 'release'
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: test "$RELEASE_TAG" = "v$(node -p "require('./package.json').version")"
+        run: node scripts/verify-package.js --tag "$RELEASE_TAG"
+      - name: Refuse to republish an existing version
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if npm view "signalk-to-stalk@$VERSION" version >/dev/null 2>&1; then
+            echo "signalk-to-stalk@$VERSION is already published" >&2
+            exit 1
+          fi
       - name: Publish release
         if: github.event_name == 'release'
         run: npm publish --access public --provenance

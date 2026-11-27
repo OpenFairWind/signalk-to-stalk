@@ -154,9 +154,15 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
     if (!targetChanged && lastNavigationAt && emittedAt - lastNavigationAt < config.updateIntervalMs) return false
     const invalidReason = validateNavigation(snapshot.values)
     if (invalidReason) return suppressNavigation(invalidReason)
+    let sentence
+    try {
+      sentence = encode85(snapshot.values)
+    } catch (error) {
+      return suppressNavigation('navigation-encoding-failed', { message: error.message })
+    }
     calculationsAvailable = true
     lastSuppressionReason = undefined
-    emit('0x85', encode85(snapshot.values), { reason: targetChanged ? 'target-change' : 'navigation-refresh', values: snapshot.values, navigationSource: snapshot.source, targetIdentity })
+    emit('0x85', sentence, { reason: targetChanged ? 'target-change' : 'navigation-refresh', values: snapshot.values, navigationSource: snapshot.source, targetIdentity })
     lastNavigationAt = emittedAt
     telemetry?.record({ type: 'navigation', action: 'navigation-emitted', targetIdentity, source: snapshot.source })
     updateTelemetry({ ...snapshot.values, navigationSource: snapshot.source })
@@ -267,8 +273,10 @@ module.exports = function createWaypointManager(app, emit, options = {}, telemet
 
 function validateNavigation({ distance, crossTrackError, bearing }) {
   if (![distance, crossTrackError, bearing].every(Number.isFinite)) return 'navigation-invalid'
-  if (distance < 0 || distance / 1852 * 10 > 0x0fff) return 'distance-out-of-range'
-  if (Math.abs(crossTrackError) / 1852 * 100 > 0x0fff) return 'cross-track-error-out-of-range'
+  // Compare the rounded field values the encoder will transmit, so values that
+  // round past the 12-bit SeaTalk fields are suppressed instead of throwing.
+  if (distance < 0 || Math.round(distance / 1852 * 10) > 0x0fff) return 'distance-out-of-range'
+  if (Math.round(Math.abs(crossTrackError) / 1852 * 100) > 0x0fff) return 'cross-track-error-out-of-range'
   return undefined
 }
 
